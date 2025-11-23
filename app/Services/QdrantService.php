@@ -4,6 +4,7 @@ namespace App\Services;
 
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\GuzzleException;
+use GuzzleHttp\Exception\RequestException;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
@@ -164,7 +165,7 @@ class QdrantService
 
             return $body['result'] ?? [];
         } catch (GuzzleException $e) {
-            if ($e->hasResponse()) {
+            if ($e instanceof RequestException && $e->hasResponse()) {
                 $responseBody = $e->getResponse()->getBody()->getContents();
                 Log::error('Qdrant search error response: ' . $responseBody);
             }

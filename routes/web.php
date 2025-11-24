@@ -16,6 +16,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     })->name('dashboard');
 
     Route::resource('novels', \App\Http\Controllers\NovelController::class);
+    Route::put('novels/{novel}', [\App\Http\Controllers\NovelController::class, 'update'])->name('novels.update');
     Route::post('novels/{novel}/chapters', [\App\Http\Controllers\ChapterController::class, 'store'])->name('chapters.store');
     Route::put('novels/{novel}/chapters/{chapter}', [\App\Http\Controllers\ChapterController::class, 'update'])->name('chapters.update');
     Route::post('novels/{novel}/chapters/{chapter}/generate', [\App\Http\Controllers\ChapterController::class, 'generate'])->name('chapters.generate');

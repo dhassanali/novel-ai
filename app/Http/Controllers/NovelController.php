@@ -46,6 +46,21 @@ class NovelController extends Controller
         ]);
     }
 
+    public function update(Request $request, Novel $novel)
+    {
+        $this->authorize('update', $novel);
+
+        $validated = $request->validate([
+            'title' => 'required|string|max:255',
+            'description' => 'nullable|string',
+            'genre' => 'nullable|string|max:255',
+        ]);
+
+        $novel->update($validated);
+
+        return back();
+    }
+
     public function destroy(Novel $novel)
     {
         $this->authorize('delete', $novel);

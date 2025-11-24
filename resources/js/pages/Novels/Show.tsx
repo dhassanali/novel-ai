@@ -161,6 +161,25 @@ export default function Show({ novel }: Props) {
         );
     };
 
+    const [errorOpen, setErrorOpen] = useState(false);
+    const [errorMessage, setErrorMessage] = useState('');
+
+    const handleError = (error: unknown) => {
+        console.error(error);
+        if (axios.isAxiosError(error)) {
+            setErrorMessage(
+                error.response?.data?.message ||
+                    error.message ||
+                    'An unexpected error occurred.',
+            );
+        } else if (error instanceof Error) {
+            setErrorMessage(error.message);
+        } else {
+            setErrorMessage('An unexpected error occurred.');
+        }
+        setErrorOpen(true);
+    };
+
     const handleGenerate = async () => {
         if (!activeChapter) return;
         setGenerating(true);
@@ -178,7 +197,7 @@ export default function Show({ novel }: Props) {
             setGenerateOpen(false);
             setPrompt('');
         } catch (error) {
-            console.error(error);
+            handleError(error);
         } finally {
             setGenerating(false);
         }
@@ -201,7 +220,7 @@ export default function Show({ novel }: Props) {
             setAnalysisResult(response.data.analysis);
             setAnalysisOpen(true);
         } catch (error) {
-            console.error(error);
+            handleError(error);
         } finally {
             setIsBusy(false);
         }
@@ -219,7 +238,7 @@ export default function Show({ novel }: Props) {
             );
             setContent((prev) => prev + ' ' + response.data.suggestion);
         } catch (error) {
-            console.error(error);
+            handleError(error);
         } finally {
             setIsBusy(false);
         }
@@ -263,7 +282,7 @@ export default function Show({ novel }: Props) {
             setRewriteOpen(false);
             setRewriteInstruction('');
         } catch (error) {
-            console.error(error);
+            handleError(error);
         } finally {
             setIsBusy(false);
         }
@@ -283,7 +302,7 @@ export default function Show({ novel }: Props) {
             setAnalysisOpen(true);
             setExpandOpen(false);
         } catch (error) {
-            console.error(error);
+            handleError(error);
         } finally {
             setIsBusy(false);
         }
@@ -297,6 +316,24 @@ export default function Show({ novel }: Props) {
             ]}
         >
             <Head title={novel.title} />
+            <Dialog open={errorOpen} onOpenChange={setErrorOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle className="text-destructive">
+                            Error
+                        </DialogTitle>
+                    </DialogHeader>
+                    <div className="text-sm">{errorMessage}</div>
+                    <DialogFooter>
+                        <Button
+                            variant="outline"
+                            onClick={() => setErrorOpen(false)}
+                        >
+                            Close
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
             <Dialog open={editChapterOpen} onOpenChange={setEditChapterOpen}>
                 <DialogContent>
                     <DialogHeader>

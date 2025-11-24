@@ -42,7 +42,7 @@ import {
     Trash2,
     User,
 } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 interface Chapter {
     id: number;

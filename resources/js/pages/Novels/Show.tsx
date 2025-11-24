@@ -7,7 +7,11 @@ import {
     suggest,
     update as updateChapter,
 } from '@/actions/App/Http/Controllers/ChapterController';
-import { update as updateNovel } from '@/actions/App/Http/Controllers/NovelController';
+import {
+    deleteCover,
+    update as updateNovel,
+    uploadCover,
+} from '@/actions/App/Http/Controllers/NovelController';
 import {
     store as storeDocument,
     storeLink,
@@ -40,6 +44,7 @@ import {
     Pencil,
     Plus,
     Trash2,
+    Upload,
     User,
 } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -49,6 +54,7 @@ interface Chapter {
     title: string;
     content: string;
     order: number;
+    word_count: number;
 }
 
 interface SourceDocument {
@@ -63,6 +69,8 @@ interface Novel {
     title: string;
     description: string;
     genre: string;
+    total_word_count: number;
+    cover_image_url: string | null;
     chapters: Chapter[];
     source_documents: SourceDocument[];
     characters: Character[];
@@ -117,11 +125,14 @@ export default function Show({ novel }: Props) {
     const [locName, setLocName] = useState('');
     const [locDesc, setLocDesc] = useState('');
 
+    // Cover image state
+    const [coverOpen, setCoverOpen] = useState(false);
+    const coverInputRef = useRef<HTMLInputElement>(null);
+
     const openCharacterModal = (char?: Character) => {
         if (char) {
             setEditingCharacter(char);
             setCharName(char.name);
-            setCharRole(char.role || '');
             setCharDesc(char.description || '');
         } else {
             setEditingCharacter(null);
@@ -231,6 +242,32 @@ export default function Show({ novel }: Props) {
                 onSuccess: () => setEditNovelOpen(false),
             },
         );
+    };
+
+    // Cover Image Handlers
+    const handleCoverUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        router.post(
+            uploadCover.url({ novel: novel.id }),
+            {
+                cover: file,
+            },
+            {
+                forceFormData: true,
+                preserveScroll: true,
+                onSuccess: () => setCoverOpen(false),
+            },
+        );
+    };
+
+    const handleCoverDelete = () => {
+        if (confirm('Are you sure you want to delete the cover image?')) {
+            router.delete(deleteCover.url({ novel: novel.id }), {
+                preserveScroll: true,
+            });
+        }
     };
 
     // Chapter Edit State
@@ -567,6 +604,53 @@ export default function Show({ novel }: Props) {
                 {showSidebar && (
                     <div className="flex w-80 flex-col border-r bg-muted/10">
                         <div className="border-b p-4">
+                            {/* Cover Image Section */}
+                            {novel.cover_image_url ? (
+                                <div className="group relative mb-4">
+                                    <img
+                                        src={novel.cover_image_url}
+                                        alt={novel.title}
+                                        className="aspect-[2/3] w-full rounded-lg object-cover"
+                                    />
+                                    <div className="absolute inset-0 flex items-center justify-center gap-2 rounded-lg bg-black/50 opacity-0 transition-opacity group-hover:opacity-100">
+                                        <Button
+                                            size="icon"
+                                            variant="secondary"
+                                            onClick={() =>
+                                                coverInputRef.current?.click()
+                                            }
+                                        >
+                                            <Upload className="h-4 w-4" />
+                                        </Button>
+                                        <Button
+                                            size="icon"
+                                            variant="destructive"
+                                            onClick={handleCoverDelete}
+                                        >
+                                            <Trash2 className="h-4 w-4" />
+                                        </Button>
+                                    </div>
+                                </div>
+                            ) : (
+                                <Button
+                                    className="mb-4 w-full"
+                                    variant="outline"
+                                    onClick={() =>
+                                        coverInputRef.current?.click()
+                                    }
+                                >
+                                    <Upload className="mr-2 h-4 w-4" />
+                                    Upload Cover
+                                </Button>
+                            )}
+                            <input
+                                type="file"
+                                ref={coverInputRef}
+                                className="hidden"
+                                onChange={handleCoverUpload}
+                                accept="image/jpeg,image/png,image/jpg,image/webp"
+                            />
+
                             <div className="mb-4 flex items-center justify-between">
                                 <h2
                                     className="truncate pr-2 font-semibold"
@@ -583,6 +667,23 @@ export default function Show({ novel }: Props) {
                                     <Pencil className="h-3 w-3" />
                                 </Button>
                             </div>
+
+                            {/* Word Count Stats */}
+                            <div className="mb-4 rounded-lg bg-muted p-3">
+                                <div className="mb-1 text-sm font-medium text-muted-foreground">
+                                    Total Words
+                                </div>
+                                <div className="text-2xl font-bold">
+                                    {novel.total_word_count.toLocaleString()}
+                                </div>
+                                <div className="mt-1 text-xs text-muted-foreground">
+                                    {novel.chapters.length}{' '}
+                                    {novel.chapters.length === 1
+                                        ? 'chapter'
+                                        : 'chapters'}
+                                </div>
+                            </div>
+
                             <Button
                                 className="w-full"
                                 size="sm"
@@ -594,21 +695,30 @@ export default function Show({ novel }: Props) {
                         </div>
                         <div className="flex-1 space-y-1 overflow-y-auto p-2">
                             {novel.chapters.map((chapter) => (
-                                <Button
+                                <div
                                     key={chapter.id}
-                                    variant={
-                                        activeChapter?.id === chapter.id
-                                            ? 'secondary'
-                                            : 'ghost'
-                                    }
-                                    className="w-full justify-start"
-                                    onClick={() => {
-                                        setActiveChapter(chapter);
-                                        setContent(chapter.content || '');
-                                    }}
+                                    className="group relative"
                                 >
-                                    {chapter.title}
-                                </Button>
+                                    <Button
+                                        variant={
+                                            activeChapter?.id === chapter.id
+                                                ? 'secondary'
+                                                : 'ghost'
+                                        }
+                                        className="w-full justify-start pr-16"
+                                        onClick={() => {
+                                            setActiveChapter(chapter);
+                                            setContent(chapter.content || '');
+                                        }}
+                                    >
+                                        <span className="truncate">
+                                            {chapter.title}
+                                        </span>
+                                    </Button>
+                                    <div className="absolute top-1/2 right-2 -translate-y-1/2 text-xs text-muted-foreground">
+                                        {chapter.word_count.toLocaleString()}
+                                    </div>
+                                </div>
                             ))}
                             {novel.chapters.length === 0 && (
                                 <div className="py-4 text-center text-sm text-muted-foreground">
@@ -876,6 +986,15 @@ export default function Show({ novel }: Props) {
                                     </Button>
                                 </div>
                                 <div className="flex items-center gap-2">
+                                    {/* Word Count Display */}
+                                    <span className="text-sm text-muted-foreground">
+                                        {activeChapter.word_count.toLocaleString()}{' '}
+                                        words
+                                    </span>
+                                    <Separator
+                                        orientation="vertical"
+                                        className="h-6"
+                                    />
                                     {saveStatus === 'saving' && (
                                         <span className="flex items-center text-xs text-muted-foreground">
                                             <Loader2 className="mr-1 h-3 w-3 animate-spin" />

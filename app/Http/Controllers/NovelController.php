@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 
 use App\Models\Novel;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 
 class NovelController extends Controller
@@ -64,7 +65,46 @@ class NovelController extends Controller
     public function destroy(Novel $novel)
     {
         $this->authorize('delete', $novel);
+
+        // Delete cover image if exists
+        if ($novel->cover_image) {
+            Storage::disk('public')->delete($novel->cover_image);
+        }
+
         $novel->delete();
         return to_route('novels.index');
+    }
+
+    public function uploadCover(Request $request, Novel $novel)
+    {
+        $this->authorize('update', $novel);
+
+        $request->validate([
+            'cover' => 'required|image|mimes:jpeg,png,jpg,webp|max:2048',
+        ]);
+
+        // Delete old cover if exists
+        if ($novel->cover_image) {
+            Storage::disk('public')->delete($novel->cover_image);
+        }
+
+        // Store new cover
+        $path = $request->file('cover')->store('novel-covers', 'public');
+
+        $novel->update(['cover_image' => $path]);
+
+        return back()->with('success', 'Cover image uploaded successfully');
+    }
+
+    public function deleteCover(Novel $novel)
+    {
+        $this->authorize('update', $novel);
+
+        if ($novel->cover_image) {
+            Storage::disk('public')->delete($novel->cover_image);
+            $novel->update(['cover_image' => null]);
+        }
+
+        return back()->with('success', 'Cover image deleted successfully');
     }
 }

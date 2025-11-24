@@ -8,7 +8,17 @@ use Illuminate\Database\Eloquent\Model;
 class Novel extends Model
 {
     use HasFactory;
-    protected $fillable = ['title', 'description', 'genre', 'user_id'];
+    protected $fillable = ['title', 'description', 'genre', 'user_id', 'cover_image', 'total_word_count'];
+
+    protected $appends = ['cover_image_url'];
+
+    public function getCoverImageUrlAttribute(): ?string
+    {
+        if ($this->cover_image) {
+            return asset('storage/' . $this->cover_image);
+        }
+        return null;
+    }
 
     public function user()
     {
@@ -33,5 +43,11 @@ class Novel extends Model
     public function locations()
     {
         return $this->hasMany(Location::class);
+    }
+
+    public function updateTotalWordCount(): void
+    {
+        $this->total_word_count = $this->chapters()->sum('word_count');
+        $this->saveQuietly(); // Save without triggering events
     }
 }

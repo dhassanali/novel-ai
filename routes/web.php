@@ -21,6 +21,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('novels/{novel}/chapters/{chapter}/generate', [\App\Http\Controllers\ChapterController::class, 'generate'])->name('chapters.generate');
     Route::post('novels/{novel}/chapters/{chapter}/analyze', [\App\Http\Controllers\ChapterController::class, 'analyze'])->name('chapters.analyze');
     Route::post('novels/{novel}/chapters/{chapter}/suggest', [\App\Http\Controllers\ChapterController::class, 'suggest'])->name('chapters.suggest');
+    Route::post('novels/{novel}/chapters/{chapter}/rewrite', [\App\Http\Controllers\ChapterController::class, 'rewrite'])->name('chapters.rewrite');
+    Route::post('novels/{novel}/chapters/{chapter}/expand', [\App\Http\Controllers\ChapterController::class, 'expand'])->name('chapters.expand');
     Route::post('novels/{novel}/documents', [\App\Http\Controllers\SourceDocumentController::class, 'store'])->name('documents.store');
     Route::post('novels/{novel}/documents/link', [\App\Http\Controllers\SourceDocumentController::class, 'storeLink'])->name('documents.storeLink');
 });

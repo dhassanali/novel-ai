@@ -6,7 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useState, useRef } from 'react';
-import { store as storeChapter, update as updateChapter, generate, analyze, suggest } from '@/actions/App/Http/Controllers/ChapterController';
+import { store as storeChapter, update as updateChapter, generate, analyze, suggest, rewrite, expand } from '@/actions/App/Http/Controllers/ChapterController';
 import { store as storeDocument, storeLink } from '@/actions/App/Http/Controllers/SourceDocumentController';
 import axios from 'axios';
 import { Switch } from '@/components/ui/switch';
@@ -127,6 +127,64 @@ export default function Show({ novel }: Props) {
                 context: text
             });
             setContent(prev => prev + ' ' + response.data.suggestion);
+        } catch (error) {
+            console.error(error);
+        } finally {
+            setIsBusy(false);
+        }
+    };
+
+    const [rewriteOpen, setRewriteOpen] = useState(false);
+    const [rewriteSelection, setRewriteSelection] = useState('');
+    const [rewriteInstruction, setRewriteInstruction] = useState('');
+    const [expandOpen, setExpandOpen] = useState(false);
+    const [expandSelection, setExpandSelection] = useState('');
+
+    const handleRewriteRequest = (text: string) => {
+        setRewriteSelection(text);
+        setRewriteOpen(true);
+    };
+
+    const handleExpandRequest = (text: string) => {
+        setExpandSelection(text);
+        setExpandOpen(true);
+    };
+
+    const handleRewrite = async () => {
+        if (!activeChapter) return;
+        setIsBusy(true);
+        try {
+            const response = await axios.post(rewrite.url({ novel: novel.id, chapter: activeChapter.id }), {
+                selection: rewriteSelection,
+                instruction: rewriteInstruction
+            });
+            // Replace the selected text with the rewritten text
+            // Note: This is a simple replacement. For a real editor, we'd want to use Tiptap commands to replace the selection range.
+            // Since we don't have direct access to the editor instance here, we might need to rethink this or just append for now.
+            // Ideally, the Editor component should handle the replacement if we pass the result back, or we update the content state.
+            // For now, let's append it to a "Rewrite Result" dialog or just replace the content if it matches (risky).
+            // Better approach: Show the result in a dialog and let the user copy it.
+            setAnalysisResult("Rewritten Text:\n\n" + response.data.rewritten);
+            setAnalysisOpen(true);
+            setRewriteOpen(false);
+            setRewriteInstruction('');
+        } catch (error) {
+            console.error(error);
+        } finally {
+            setIsBusy(false);
+        }
+    };
+
+    const handleExpand = async () => {
+        if (!activeChapter) return;
+        setIsBusy(true);
+        try {
+            const response = await axios.post(expand.url({ novel: novel.id, chapter: activeChapter.id }), {
+                selection: expandSelection
+            });
+            setAnalysisResult("Expanded Scene:\n\n" + response.data.expanded);
+            setAnalysisOpen(true);
+            setExpandOpen(false);
         } catch (error) {
             console.error(error);
         } finally {
@@ -291,13 +349,59 @@ export default function Show({ novel }: Props) {
                                     <Dialog open={analysisOpen} onOpenChange={setAnalysisOpen}>
                                         <DialogContent className="max-w-2xl">
                                             <DialogHeader>
-                                                <DialogTitle>Analysis Result</DialogTitle>
+                                                <DialogTitle>AI Result</DialogTitle>
                                             </DialogHeader>
                                             <div className="max-h-[60vh] overflow-y-auto whitespace-pre-wrap">
                                                 {analysisResult}
                                             </div>
                                             <DialogFooter>
                                                 <Button onClick={() => setAnalysisOpen(false)}>Close</Button>
+                                                <Button variant="secondary" onClick={() => {
+                                                    navigator.clipboard.writeText(analysisResult.replace(/^(Rewritten Text:|Expanded Scene:)\n\n/, ''));
+                                                    setAnalysisOpen(false);
+                                                }}>Copy</Button>
+                                            </DialogFooter>
+                                        </DialogContent>
+                                    </Dialog>
+
+                                    <Dialog open={rewriteOpen} onOpenChange={setRewriteOpen}>
+                                        <DialogContent>
+                                            <DialogHeader>
+                                                <DialogTitle>Rewrite Selection</DialogTitle>
+                                            </DialogHeader>
+                                            <div className="space-y-4">
+                                                <div>
+                                                    <Label htmlFor="instruction">Instructions</Label>
+                                                    <Input
+                                                        id="instruction"
+                                                        value={rewriteInstruction}
+                                                        onChange={e => setRewriteInstruction(e.target.value)}
+                                                        placeholder="E.g., Make it more descriptive, Change tone to ominous..."
+                                                    />
+                                                </div>
+                                                <div className="text-sm text-muted-foreground p-2 bg-muted rounded">
+                                                    "{rewriteSelection.substring(0, 100)}..."
+                                                </div>
+                                            </div>
+                                            <DialogFooter>
+                                                <Button onClick={handleRewrite} disabled={isBusy}>Rewrite</Button>
+                                            </DialogFooter>
+                                        </DialogContent>
+                                    </Dialog>
+
+                                    <Dialog open={expandOpen} onOpenChange={setExpandOpen}>
+                                        <DialogContent>
+                                            <DialogHeader>
+                                                <DialogTitle>Expand Selection</DialogTitle>
+                                            </DialogHeader>
+                                            <div className="space-y-4">
+                                                <p>Expand this summary into a full scene?</p>
+                                                <div className="text-sm text-muted-foreground p-2 bg-muted rounded">
+                                                    "{expandSelection.substring(0, 100)}..."
+                                                </div>
+                                            </div>
+                                            <DialogFooter>
+                                                <Button onClick={handleExpand} disabled={isBusy}>Expand</Button>
                                             </DialogFooter>
                                         </DialogContent>
                                     </Dialog>
@@ -309,6 +413,8 @@ export default function Show({ novel }: Props) {
                                     onChange={setContent}
                                     onAnalyze={handleAnalyze}
                                     onSuggest={handleSuggest}
+                                    onRewrite={handleRewriteRequest}
+                                    onExpand={handleExpandRequest}
                                     isBusy={isBusy}
                                 />
                             </div>

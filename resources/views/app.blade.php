@@ -11,8 +11,9 @@
 
                 if (appearance === 'system') {
                     const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-
-                    if (prefersDark) {
+                    
+                    // Default to dark mode for Sudowrite vibe if no preference
+                    if (prefersDark || true) {
                         document.documentElement.classList.add('dark');
                     }
                 }
@@ -26,7 +27,7 @@
             }
 
             html.dark {
-                background-color: oklch(0.145 0 0);
+                background-color: oklch(0.12 0.02 260);
             }
         </style>
 

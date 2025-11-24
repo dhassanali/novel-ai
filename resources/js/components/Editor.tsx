@@ -13,10 +13,12 @@ interface EditorProps {
     onChange: (content: string) => void
     onAnalyze?: (text: string) => void
     onSuggest?: (text: string) => void
+    onRewrite?: (text: string) => void
+    onExpand?: (text: string) => void
     isBusy?: boolean
 }
 
-export default function Editor({ content, onChange, onAnalyze, onSuggest, isBusy = false }: EditorProps) {
+export default function Editor({ content, onChange, onAnalyze, onSuggest, onRewrite, onExpand, isBusy = false }: EditorProps) {
     const editor = useEditor({
         extensions: [
             StarterKit,
@@ -83,6 +85,32 @@ export default function Editor({ content, onChange, onAnalyze, onSuggest, isBusy
                     >
                         {isBusy ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Sparkles className="h-4 w-4 mr-1" />}
                         Analyze
+                    </Button>
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                            const selection = editor.state.selection
+                            const text = editor.state.doc.textBetween(selection.from, selection.to)
+                            onRewrite?.(text)
+                        }}
+                        disabled={isBusy}
+                    >
+                        <Wand2 className="h-4 w-4 mr-1" />
+                        Rewrite
+                    </Button>
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                            const selection = editor.state.selection
+                            const text = editor.state.doc.textBetween(selection.from, selection.to)
+                            onExpand?.(text)
+                        }}
+                        disabled={isBusy}
+                    >
+                        <Wand2 className="h-4 w-4 mr-1" />
+                        Expand
                     </Button>
                 </BubbleMenu>
             )}

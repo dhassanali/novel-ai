@@ -91,10 +91,39 @@ class ChapterController extends Controller
             $previousContent = '...' . substr($previousContent, -10000);
         }
         
-        $prompt = "Continue the story based on the following context. Keep the style consistent.\n\nStory So Far:\n\"{$previousContent}\"\n\nCurrent Context:\n\"{$context}\"";
+        $prompt = "Novel Title: {$novel->title}\nGenre: {$novel->genre}\nDescription: {$novel->description}\n\nContinue the story based on the following context. Keep the style consistent.\n\nStory So Far:\n\"{$previousContent}\"\n\nCurrent Context:\n\"{$context}\"";
         
         $suggestion = \App\Facades\LocalAI::generate($prompt);
         
         return response()->json(['suggestion' => $suggestion]);
+    }
+
+    public function rewrite(Request $request, Novel $novel, Chapter $chapter)
+    {
+        set_time_limit(120);
+        $validated = $request->validate([
+            'selection' => 'required|string',
+            'instruction' => 'required|string',
+        ]);
+
+        $prompt = "Novel Title: {$novel->title}\nGenre: {$novel->genre}\nDescription: {$novel->description}\n\nRewrite the following text based on these instructions: \"{$validated['instruction']}\".\n\nOriginal Text:\n\"{$validated['selection']}\"\n\nRewritten Text:";
+        
+        $rewritten = \App\Facades\LocalAI::generate($prompt);
+        
+        return response()->json(['rewritten' => $rewritten]);
+    }
+
+    public function expand(Request $request, Novel $novel, Chapter $chapter)
+    {
+        set_time_limit(120);
+        $validated = $request->validate([
+            'selection' => 'required|string',
+        ]);
+
+        $prompt = "Novel Title: {$novel->title}\nGenre: {$novel->genre}\nDescription: {$novel->description}\n\nExpand the following summary or short text into a full, detailed scene. Include dialogue, sensory details, and internal monologue where appropriate.\n\nSummary:\n\"{$validated['selection']}\"\n\nExpanded Scene:";
+        
+        $expanded = \App\Facades\LocalAI::generate($prompt);
+        
+        return response()->json(['expanded' => $expanded]);
     }
 }

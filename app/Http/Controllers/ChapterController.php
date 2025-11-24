@@ -32,6 +32,10 @@ class ChapterController extends Controller
 
         $chapter->update($validated);
 
+        if ($request->wantsJson()) {
+            return response()->json(['status' => 'saved']);
+        }
+
         return back();
     }
 

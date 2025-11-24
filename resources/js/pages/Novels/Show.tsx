@@ -30,8 +30,15 @@ import { Textarea } from '@/components/ui/textarea';
 import AppLayout from '@/layouts/app-layout';
 import { Head, router } from '@inertiajs/react';
 import axios from 'axios';
-import { FileText, Globe, Pencil } from 'lucide-react';
-import { useRef, useState } from 'react';
+import {
+    Check,
+    FileText,
+    Globe,
+    Loader2,
+    PanelLeft,
+    Pencil,
+} from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
 
 interface Chapter {
     id: number;
@@ -65,11 +72,15 @@ export default function Show({ novel }: Props) {
         novel.chapters[0] || null,
     );
     const [content, setContent] = useState(activeChapter?.content || '');
+    const [saveStatus, setSaveStatus] = useState<
+        'saved' | 'saving' | 'unsaved'
+    >('saved');
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [generateOpen, setGenerateOpen] = useState(false);
     const [prompt, setPrompt] = useState('');
     const [generating, setGenerating] = useState(false);
     const [webSearchEnabled, setWebSearchEnabled] = useState(false);
+    const [showSidebar, setShowSidebar] = useState(true);
 
     // Novel Edit State
     const [editNovelOpen, setEditNovelOpen] = useState(false);
@@ -131,19 +142,39 @@ export default function Show({ novel }: Props) {
         );
     };
 
-    const saveChapter = () => {
+    const saveChapter = async () => {
         if (!activeChapter) return;
-        router.put(
-            updateChapter.url({ novel: novel.id, chapter: activeChapter.id }),
-            {
-                title: activeChapter.title,
-                content: content,
-            },
-            {
-                preserveScroll: true,
-            },
-        );
+        setSaveStatus('saving');
+        try {
+            await axios.put(
+                updateChapter.url({
+                    novel: novel.id,
+                    chapter: activeChapter.id,
+                }),
+                {
+                    title: activeChapter.title,
+                    content: content,
+                },
+            );
+            setSaveStatus('saved');
+        } catch (error) {
+            setSaveStatus('unsaved');
+            handleError(error);
+        }
     };
+
+    // Auto-save effect
+    useEffect(() => {
+        if (!activeChapter || content === activeChapter.content) return;
+
+        setSaveStatus('unsaved');
+
+        const timeoutId = setTimeout(() => {
+            saveChapter();
+        }, 2000); // Auto-save after 2 seconds of inactivity
+
+        return () => clearTimeout(timeoutId);
+    }, [content, activeChapter]);
 
     const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -404,176 +435,181 @@ export default function Show({ novel }: Props) {
             </Dialog>
             <div className="flex h-[calc(100vh-4rem)]">
                 {/* Sidebar */}
-                <div className="flex w-80 flex-col border-r bg-muted/10">
-                    <div className="border-b p-4">
-                        <div className="mb-4 flex items-center justify-between">
-                            <h2
-                                className="truncate pr-2 font-semibold"
-                                title={novel.title}
-                            >
-                                {novel.title}
-                            </h2>
-                            <Button
-                                size="icon"
-                                variant="ghost"
-                                className="h-6 w-6 shrink-0"
-                                onClick={() => setEditNovelOpen(true)}
-                            >
-                                <Pencil className="h-3 w-3" />
-                            </Button>
-                        </div>
-                        <Button
-                            className="w-full"
-                            size="sm"
-                            variant="outline"
-                            onClick={createChapter}
-                        >
-                            New Chapter
-                        </Button>
-                    </div>
-                    <div className="flex-1 space-y-1 overflow-y-auto p-2">
-                        {novel.chapters.map((chapter) => (
-                            <Button
-                                key={chapter.id}
-                                variant={
-                                    activeChapter?.id === chapter.id
-                                        ? 'secondary'
-                                        : 'ghost'
-                                }
-                                className="w-full justify-start"
-                                onClick={() => {
-                                    setActiveChapter(chapter);
-                                    setContent(chapter.content || '');
-                                }}
-                            >
-                                {chapter.title}
-                            </Button>
-                        ))}
-                        {novel.chapters.length === 0 && (
-                            <div className="py-4 text-center text-sm text-muted-foreground">
-                                No chapters yet.
-                            </div>
-                        )}
-                    </div>
-                    <Separator />
-                    <div className="flex h-1/3 flex-col border-t p-4">
-                        <div className="mb-2 flex items-center justify-between">
-                            <h2 className="font-semibold">Sources</h2>
-                            <div className="flex gap-1">
-                                <input
-                                    type="file"
-                                    ref={fileInputRef}
-                                    className="hidden"
-                                    onChange={handleFileUpload}
-                                    accept=".pdf,.txt,.md,.csv"
-                                    multiple
-                                />
+                {showSidebar && (
+                    <div className="flex w-80 flex-col border-r bg-muted/10">
+                        <div className="border-b p-4">
+                            <div className="mb-4 flex items-center justify-between">
+                                <h2
+                                    className="truncate pr-2 font-semibold"
+                                    title={novel.title}
+                                >
+                                    {novel.title}
+                                </h2>
                                 <Button
                                     size="icon"
                                     variant="ghost"
-                                    className="h-6 w-6"
-                                    onClick={() =>
-                                        fileInputRef.current?.click()
-                                    }
+                                    className="h-6 w-6 shrink-0"
+                                    onClick={() => setEditNovelOpen(true)}
                                 >
-                                    <span className="sr-only">Upload File</span>
-                                    +
+                                    <Pencil className="h-3 w-3" />
                                 </Button>
-                                <Dialog>
-                                    <DialogTrigger asChild>
-                                        <Button
-                                            size="icon"
-                                            variant="ghost"
-                                            className="h-6 w-6"
-                                        >
-                                            <span className="sr-only">
-                                                Add Link
-                                            </span>
-                                            <Globe className="h-4 w-4" />
-                                        </Button>
-                                    </DialogTrigger>
-                                    <DialogContent>
-                                        <DialogHeader>
-                                            <DialogTitle>
-                                                Add Web Link
-                                            </DialogTitle>
-                                        </DialogHeader>
-                                        <form
-                                            onSubmit={(e) => {
-                                                e.preventDefault();
-                                                const formData = new FormData(
-                                                    e.currentTarget,
-                                                );
-                                                const url = formData.get(
-                                                    'url',
-                                                ) as string;
-                                                if (url) {
-                                                    router.post(
-                                                        storeLink.url({
-                                                            novel: novel.id,
-                                                        }),
-                                                        { url },
-                                                    );
-                                                    (
-                                                        e.target as HTMLFormElement
-                                                    ).reset();
-                                                }
-                                            }}
-                                        >
-                                            <div className="grid gap-4 py-4">
-                                                <div className="grid grid-cols-4 items-center gap-4">
-                                                    <Label
-                                                        htmlFor="url"
-                                                        className="text-right"
-                                                    >
-                                                        URL
-                                                    </Label>
-                                                    <Input
-                                                        id="url"
-                                                        name="url"
-                                                        placeholder="https://example.com"
-                                                        className="col-span-3"
-                                                        required
-                                                    />
-                                                </div>
-                                            </div>
-                                            <DialogFooter>
-                                                <Button type="submit">
-                                                    Add Link
-                                                </Button>
-                                            </DialogFooter>
-                                        </form>
-                                    </DialogContent>
-                                </Dialog>
                             </div>
+                            <Button
+                                className="w-full"
+                                size="sm"
+                                variant="outline"
+                                onClick={createChapter}
+                            >
+                                New Chapter
+                            </Button>
                         </div>
-                        <div className="flex-1 space-y-1 overflow-y-auto">
-                            {novel.source_documents.map((doc) => (
-                                <div
-                                    key={doc.id}
-                                    className="flex items-center justify-between truncate rounded px-2 py-1 text-sm hover:bg-accent/50"
+                        <div className="flex-1 space-y-1 overflow-y-auto p-2">
+                            {novel.chapters.map((chapter) => (
+                                <Button
+                                    key={chapter.id}
+                                    variant={
+                                        activeChapter?.id === chapter.id
+                                            ? 'secondary'
+                                            : 'ghost'
+                                    }
+                                    className="w-full justify-start"
+                                    onClick={() => {
+                                        setActiveChapter(chapter);
+                                        setContent(chapter.content || '');
+                                    }}
                                 >
-                                    <span className="flex items-center gap-2 truncate">
-                                        {doc.type === 'web_link' ? (
-                                            <Globe className="h-3 w-3" />
-                                        ) : (
-                                            <FileText className="h-3 w-3" />
-                                        )}
-                                        {doc.filename}
-                                    </span>
-                                    <span className="text-xs text-muted-foreground">
-                                        {doc.status}
-                                    </span>
-                                </div>
+                                    {chapter.title}
+                                </Button>
                             ))}
-                            {novel.source_documents.length === 0 && (
+                            {novel.chapters.length === 0 && (
                                 <div className="py-4 text-center text-sm text-muted-foreground">
-                                    No source documents.
+                                    No chapters yet.
                                 </div>
                             )}
                         </div>
+                        <Separator />
+                        <div className="flex h-1/3 flex-col border-t p-4">
+                            <div className="mb-2 flex items-center justify-between">
+                                <h2 className="font-semibold">Sources</h2>
+                                <div className="flex gap-1">
+                                    <input
+                                        type="file"
+                                        ref={fileInputRef}
+                                        className="hidden"
+                                        onChange={handleFileUpload}
+                                        accept=".pdf,.txt,.md,.csv"
+                                        multiple
+                                    />
+                                    <Button
+                                        size="icon"
+                                        variant="ghost"
+                                        className="h-6 w-6"
+                                        onClick={() =>
+                                            fileInputRef.current?.click()
+                                        }
+                                    >
+                                        <span className="sr-only">
+                                            Upload File
+                                        </span>
+                                        +
+                                    </Button>
+                                    <Dialog>
+                                        <DialogTrigger asChild>
+                                            <Button
+                                                size="icon"
+                                                variant="ghost"
+                                                className="h-6 w-6"
+                                            >
+                                                <span className="sr-only">
+                                                    Add Link
+                                                </span>
+                                                <Globe className="h-4 w-4" />
+                                            </Button>
+                                        </DialogTrigger>
+                                        <DialogContent>
+                                            <DialogHeader>
+                                                <DialogTitle>
+                                                    Add Web Link
+                                                </DialogTitle>
+                                            </DialogHeader>
+                                            <form
+                                                onSubmit={(e) => {
+                                                    e.preventDefault();
+                                                    const formData =
+                                                        new FormData(
+                                                            e.currentTarget,
+                                                        );
+                                                    const url = formData.get(
+                                                        'url',
+                                                    ) as string;
+                                                    if (url) {
+                                                        router.post(
+                                                            storeLink.url({
+                                                                novel: novel.id,
+                                                            }),
+                                                            { url },
+                                                        );
+                                                        (
+                                                            e.target as HTMLFormElement
+                                                        ).reset();
+                                                    }
+                                                }}
+                                            >
+                                                <div className="grid gap-4 py-4">
+                                                    <div className="grid grid-cols-4 items-center gap-4">
+                                                        <Label
+                                                            htmlFor="url"
+                                                            className="text-right"
+                                                        >
+                                                            URL
+                                                        </Label>
+                                                        <Input
+                                                            id="url"
+                                                            name="url"
+                                                            placeholder="https://example.com"
+                                                            className="col-span-3"
+                                                            required
+                                                        />
+                                                    </div>
+                                                </div>
+                                                <DialogFooter>
+                                                    <Button type="submit">
+                                                        Add Link
+                                                    </Button>
+                                                </DialogFooter>
+                                            </form>
+                                        </DialogContent>
+                                    </Dialog>
+                                </div>
+                            </div>
+                            <div className="flex-1 space-y-1 overflow-y-auto">
+                                {novel.source_documents.map((doc) => (
+                                    <div
+                                        key={doc.id}
+                                        className="flex items-center justify-between truncate rounded px-2 py-1 text-sm hover:bg-accent/50"
+                                    >
+                                        <span className="flex items-center gap-2 truncate">
+                                            {doc.type === 'web_link' ? (
+                                                <Globe className="h-3 w-3" />
+                                            ) : (
+                                                <FileText className="h-3 w-3" />
+                                            )}
+                                            {doc.filename}
+                                        </span>
+                                        <span className="text-xs text-muted-foreground">
+                                            {doc.status}
+                                        </span>
+                                    </div>
+                                ))}
+                                {novel.source_documents.length === 0 && (
+                                    <div className="py-4 text-center text-sm text-muted-foreground">
+                                        No source documents.
+                                    </div>
+                                )}
+                            </div>
+                        </div>
                     </div>
-                </div>
+                )}
 
                 {/* Main Content */}
                 <div className="flex flex-1 flex-col">
@@ -581,6 +617,20 @@ export default function Show({ novel }: Props) {
                         <>
                             <div className="flex items-center justify-between border-b bg-background p-4">
                                 <div className="flex items-center gap-2">
+                                    <Button
+                                        size="icon"
+                                        variant="ghost"
+                                        onClick={() =>
+                                            setShowSidebar(!showSidebar)
+                                        }
+                                        title={
+                                            showSidebar
+                                                ? 'Hide Sidebar'
+                                                : 'Show Sidebar'
+                                        }
+                                    >
+                                        <PanelLeft className="h-4 w-4" />
+                                    </Button>
                                     <h1 className="text-xl font-bold">
                                         {activeChapter.title}
                                     </h1>
@@ -598,10 +648,28 @@ export default function Show({ novel }: Props) {
                                         <Pencil className="h-3 w-3" />
                                     </Button>
                                 </div>
-                                <div className="flex gap-2">
+                                <div className="flex items-center gap-2">
+                                    {saveStatus === 'saving' && (
+                                        <span className="flex items-center text-xs text-muted-foreground">
+                                            <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                                            Saving...
+                                        </span>
+                                    )}
+                                    {saveStatus === 'saved' && (
+                                        <span className="flex items-center text-xs text-muted-foreground">
+                                            <Check className="mr-1 h-3 w-3" />
+                                            Saved
+                                        </span>
+                                    )}
+                                    {saveStatus === 'unsaved' && (
+                                        <span className="text-xs text-muted-foreground">
+                                            Unsaved changes
+                                        </span>
+                                    )}
                                     <Button
                                         variant="outline"
-                                        onClick={saveChapter}
+                                        onClick={() => saveChapter()}
+                                        disabled={saveStatus === 'saving'}
                                     >
                                         Save
                                     </Button>

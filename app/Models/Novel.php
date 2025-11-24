@@ -22,4 +22,14 @@ class Novel extends Model
     {
         return $this->hasMany(SourceDocument::class);
     }
+
+    public function characters()
+    {
+        return $this->hasMany(Character::class);
+    }
+
+    public function locations()
+    {
+        return $this->hasMany(Location::class);
+    }
 }

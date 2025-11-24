@@ -45,10 +45,10 @@ class ChapterController extends Controller
             'prompt' => 'required|string',
             'mode' => 'sometimes|string|in:context,web',
         ]);
-        
+
         $prompt = $request->input('prompt');
         $mode = $request->input('mode', 'context');
-        
+
         if ($mode === 'web') {
             $generatedText = \App\Facades\LocalAI::generateWithWebSearch($prompt);
         } else {
@@ -57,10 +57,10 @@ class ChapterController extends Controller
                     ['key' => 'collection', 'match' => ['value' => 'novel_' . $novel->id]]
                 ]
             ];
-            
+
             $generatedText = \App\Facades\LocalAI::askDocuments($prompt, 3, $filter);
         }
-            
+
         return response()->json(['text' => $generatedText]);
     }
 
@@ -69,11 +69,11 @@ class ChapterController extends Controller
         set_time_limit(120); // Increase timeout to 2 minutes
         $request->validate(['selection' => 'required|string']);
         $selection = $request->input('selection');
-        
+
         $prompt = "Analyze the following text for grammar, style, and clarity improvements. Provide specific suggestions.\n\nText: \"{$selection}\"";
-        
+
         $analysis = \App\Facades\LocalAI::generate($prompt);
-        
+
         return response()->json(['analysis' => $analysis]);
     }
 
@@ -82,23 +82,25 @@ class ChapterController extends Controller
         set_time_limit(120); // Increase timeout to 2 minutes
         $request->validate(['context' => 'required|string']);
         $context = $request->input('context');
-        
+
         // Fetch previous chapters content
         $previousContent = $novel->chapters()
             ->where('order', '<', $chapter->order)
             ->orderBy('order', 'asc')
             ->pluck('content')
             ->implode("\n\n");
-            
+
         // Truncate previous content if too long (e.g., last 10000 chars)
         if (strlen($previousContent) > 10000) {
             $previousContent = '...' . substr($previousContent, -10000);
         }
-        
-        $prompt = "Novel Title: {$novel->title}\nGenre: {$novel->genre}\nDescription: {$novel->description}\nChapter Title: {$chapter->title}\n\nContinue the story based on the following context. Keep the style consistent.\n\nStory So Far:\n\"{$previousContent}\"\n\nCurrent Context:\n\"{$context}\"";
-        
+
+        $loreContext = $this->getLoreContext($novel);
+
+        $prompt = "Novel Title: {$novel->title}\nGenre: {$novel->genre}\nDescription: {$novel->description}\nChapter Title: {$chapter->title}\n\n{$loreContext}\n\nContinue the story based on the following context. Keep the style consistent.\n\nStory So Far:\n\"{$previousContent}\"\n\nCurrent Context:\n\"{$context}\"";
+
         $suggestion = \App\Facades\LocalAI::generate($prompt);
-        
+
         return response()->json(['suggestion' => $suggestion]);
     }
 
@@ -110,10 +112,12 @@ class ChapterController extends Controller
             'instruction' => 'required|string',
         ]);
 
-        $prompt = "Novel Title: {$novel->title}\nGenre: {$novel->genre}\nDescription: {$novel->description}\nChapter Title: {$chapter->title}\n\nRewrite the following text based on these instructions: \"{$validated['instruction']}\".\n\nOriginal Text:\n\"{$validated['selection']}\"\n\nRewritten Text:";
-        
+        $loreContext = $this->getLoreContext($novel);
+
+        $prompt = "Novel Title: {$novel->title}\nGenre: {$novel->genre}\nDescription: {$novel->description}\nChapter Title: {$chapter->title}\n\n{$loreContext}\n\nRewrite the following text based on these instructions: \"{$validated['instruction']}\".\n\nOriginal Text:\n\"{$validated['selection']}\"\n\nRewritten Text:";
+
         $rewritten = \App\Facades\LocalAI::generate($prompt);
-        
+
         return response()->json(['rewritten' => $rewritten]);
     }
 
@@ -124,10 +128,33 @@ class ChapterController extends Controller
             'selection' => 'required|string',
         ]);
 
-        $prompt = "Novel Title: {$novel->title}\nGenre: {$novel->genre}\nDescription: {$novel->description}\nChapter Title: {$chapter->title}\n\nExpand the following summary or short text into a full, detailed scene. Include dialogue, sensory details, and internal monologue where appropriate.\n\nSummary:\n\"{$validated['selection']}\"\n\nExpanded Scene:";
-        
+        $loreContext = $this->getLoreContext($novel);
+
+        $prompt = "Novel Title: {$novel->title}\nGenre: {$novel->genre}\nDescription: {$novel->description}\nChapter Title: {$chapter->title}\n\n{$loreContext}\n\nExpand the following summary or short text into a full, detailed scene. Include dialogue, sensory details, and internal monologue where appropriate.\n\nSummary:\n\"{$validated['selection']}\"\n\nExpanded Scene:";
+
         $expanded = \App\Facades\LocalAI::generate($prompt);
-        
+
         return response()->json(['expanded' => $expanded]);
+    }
+
+    private function getLoreContext(Novel $novel)
+    {
+        $characters = $novel->characters()->get()->map(function ($char) {
+            return "- {$char->name} ({$char->role}): {$char->description}";
+        })->implode("\n");
+
+        $locations = $novel->locations()->get()->map(function ($loc) {
+            return "- {$loc->name}: {$loc->description}";
+        })->implode("\n");
+
+        $context = "";
+        if (!empty($characters)) {
+            $context .= "Characters:\n{$characters}\n\n";
+        }
+        if (!empty($locations)) {
+            $context .= "Locations:\n{$locations}\n\n";
+        }
+
+        return $context;
     }
 }

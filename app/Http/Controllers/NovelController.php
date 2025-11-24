@@ -38,8 +38,8 @@ class NovelController extends Controller
     public function show(Novel $novel)
     {
         $this->authorize('view', $novel);
-        
-        $novel->load(['chapters', 'sourceDocuments']);
+
+        $novel->load(['chapters', 'sourceDocuments', 'characters', 'locations']);
 
         return Inertia::render('Novels/Show', [
             'novel' => $novel

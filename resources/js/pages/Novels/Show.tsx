@@ -35,8 +35,12 @@ import {
     FileText,
     Globe,
     Loader2,
+    MapPin,
     PanelLeft,
     Pencil,
+    Plus,
+    Trash2,
+    User,
 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
@@ -61,6 +65,21 @@ interface Novel {
     genre: string;
     chapters: Chapter[];
     source_documents: SourceDocument[];
+    characters: Character[];
+    locations: Location[];
+}
+
+interface Character {
+    id: number;
+    name: string;
+    description: string;
+    role: string;
+}
+
+interface Location {
+    id: number;
+    name: string;
+    description: string;
 }
 
 interface Props {
@@ -81,6 +100,116 @@ export default function Show({ novel }: Props) {
     const [generating, setGenerating] = useState(false);
     const [webSearchEnabled, setWebSearchEnabled] = useState(false);
     const [showSidebar, setShowSidebar] = useState(true);
+
+    // Character & Location State
+    const [characterOpen, setCharacterOpen] = useState(false);
+    const [editingCharacter, setEditingCharacter] = useState<Character | null>(
+        null,
+    );
+    const [charName, setCharName] = useState('');
+    const [charRole, setCharRole] = useState('');
+    const [charDesc, setCharDesc] = useState('');
+
+    const [locationOpen, setLocationOpen] = useState(false);
+    const [editingLocation, setEditingLocation] = useState<Location | null>(
+        null,
+    );
+    const [locName, setLocName] = useState('');
+    const [locDesc, setLocDesc] = useState('');
+
+    const openCharacterModal = (char?: Character) => {
+        if (char) {
+            setEditingCharacter(char);
+            setCharName(char.name);
+            setCharRole(char.role || '');
+            setCharDesc(char.description || '');
+        } else {
+            setEditingCharacter(null);
+            setCharName('');
+            setCharRole('');
+            setCharDesc('');
+        }
+        setCharacterOpen(true);
+    };
+
+    const openLocationModal = (loc?: Location) => {
+        if (loc) {
+            setEditingLocation(loc);
+            setLocName(loc.name);
+            setLocDesc(loc.description || '');
+        } else {
+            setEditingLocation(null);
+            setLocName('');
+            setLocDesc('');
+        }
+        setLocationOpen(true);
+    };
+
+    const handleSaveCharacter = () => {
+        if (editingCharacter) {
+            router.put(
+                `/novels/${novel.id}/characters/${editingCharacter.id}`,
+                {
+                    name: charName,
+                    role: charRole,
+                    description: charDesc,
+                },
+                {
+                    onSuccess: () => setCharacterOpen(false),
+                },
+            );
+        } else {
+            router.post(
+                `/novels/${novel.id}/characters`,
+                {
+                    name: charName,
+                    role: charRole,
+                    description: charDesc,
+                },
+                {
+                    onSuccess: () => setCharacterOpen(false),
+                },
+            );
+        }
+    };
+
+    const handleDeleteCharacter = (char: Character) => {
+        if (confirm('Are you sure you want to delete this character?')) {
+            router.delete(`/novels/${novel.id}/characters/${char.id}`);
+        }
+    };
+
+    const handleSaveLocation = () => {
+        if (editingLocation) {
+            router.put(
+                `/novels/${novel.id}/locations/${editingLocation.id}`,
+                {
+                    name: locName,
+                    description: locDesc,
+                },
+                {
+                    onSuccess: () => setLocationOpen(false),
+                },
+            );
+        } else {
+            router.post(
+                `/novels/${novel.id}/locations`,
+                {
+                    name: locName,
+                    description: locDesc,
+                },
+                {
+                    onSuccess: () => setLocationOpen(false),
+                },
+            );
+        }
+    };
+
+    const handleDeleteLocation = (loc: Location) => {
+        if (confirm('Are you sure you want to delete this location?')) {
+            router.delete(`/novels/${novel.id}/locations/${loc.id}`);
+        }
+    };
 
     // Novel Edit State
     const [editNovelOpen, setEditNovelOpen] = useState(false);
@@ -607,6 +736,104 @@ export default function Show({ novel }: Props) {
                                     </div>
                                 )}
                             </div>
+                            <Separator />
+                            <div className="flex h-1/3 flex-col border-t p-4">
+                                <div className="mb-2 flex items-center justify-between">
+                                    <h2 className="font-semibold">
+                                        Characters
+                                    </h2>
+                                    <Button
+                                        size="icon"
+                                        variant="ghost"
+                                        className="h-6 w-6"
+                                        onClick={() => openCharacterModal()}
+                                    >
+                                        <Plus className="h-4 w-4" />
+                                    </Button>
+                                </div>
+                                <div className="flex-1 space-y-1 overflow-y-auto">
+                                    {novel.characters?.map((char) => (
+                                        <div
+                                            key={char.id}
+                                            className="group flex items-center justify-between rounded px-2 py-1 text-sm hover:bg-accent/50"
+                                        >
+                                            <div
+                                                className="flex cursor-pointer items-center gap-2 truncate"
+                                                onClick={() =>
+                                                    openCharacterModal(char)
+                                                }
+                                            >
+                                                <User className="h-3 w-3" />
+                                                <span>{char.name}</span>
+                                            </div>
+                                            <Button
+                                                size="icon"
+                                                variant="ghost"
+                                                className="h-4 w-4 opacity-0 group-hover:opacity-100"
+                                                onClick={() =>
+                                                    handleDeleteCharacter(char)
+                                                }
+                                            >
+                                                <Trash2 className="h-3 w-3 text-destructive" />
+                                            </Button>
+                                        </div>
+                                    ))}
+                                    {(!novel.characters ||
+                                        novel.characters.length === 0) && (
+                                        <div className="py-2 text-center text-xs text-muted-foreground">
+                                            No characters.
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                            <Separator />
+                            <div className="flex h-1/3 flex-col border-t p-4">
+                                <div className="mb-2 flex items-center justify-between">
+                                    <h2 className="font-semibold">Locations</h2>
+                                    <Button
+                                        size="icon"
+                                        variant="ghost"
+                                        className="h-6 w-6"
+                                        onClick={() => openLocationModal()}
+                                    >
+                                        <Plus className="h-4 w-4" />
+                                    </Button>
+                                </div>
+                                <div className="flex-1 space-y-1 overflow-y-auto">
+                                    {novel.locations?.map((loc) => (
+                                        <div
+                                            key={loc.id}
+                                            className="group flex items-center justify-between rounded px-2 py-1 text-sm hover:bg-accent/50"
+                                        >
+                                            <div
+                                                className="flex cursor-pointer items-center gap-2 truncate"
+                                                onClick={() =>
+                                                    openLocationModal(loc)
+                                                }
+                                            >
+                                                <MapPin className="h-3 w-3" />
+                                                <span>{loc.name}</span>
+                                            </div>
+                                            <Button
+                                                size="icon"
+                                                variant="ghost"
+                                                className="h-4 w-4 opacity-0 group-hover:opacity-100"
+                                                onClick={() =>
+                                                    handleDeleteLocation(loc)
+                                                }
+                                            >
+                                                <Trash2 className="h-3 w-3 text-destructive" />
+                                            </Button>
+                                        </div>
+                                    ))}
+                                    {(!novel.locations ||
+                                        novel.locations.length === 0) && (
+                                        <div className="py-2 text-center text-xs text-muted-foreground">
+                                            No locations.
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
                         </div>
                     </div>
                 )}
@@ -872,6 +1099,81 @@ export default function Show({ novel }: Props) {
                     )}
                 </div>
             </div>
+            <Dialog open={characterOpen} onOpenChange={setCharacterOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>
+                            {editingCharacter
+                                ? 'Edit Character'
+                                : 'Add Character'}
+                        </DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                        <div>
+                            <Label htmlFor="char-name">Name</Label>
+                            <Input
+                                id="char-name"
+                                value={charName}
+                                onChange={(e) => setCharName(e.target.value)}
+                                placeholder="Character Name"
+                            />
+                        </div>
+                        <div>
+                            <Label htmlFor="char-role">Role</Label>
+                            <Input
+                                id="char-role"
+                                value={charRole}
+                                onChange={(e) => setCharRole(e.target.value)}
+                                placeholder="Protagonist, Antagonist, etc."
+                            />
+                        </div>
+                        <div>
+                            <Label htmlFor="char-desc">Description</Label>
+                            <Textarea
+                                id="char-desc"
+                                value={charDesc}
+                                onChange={(e) => setCharDesc(e.target.value)}
+                                placeholder="Physical appearance, personality, etc."
+                            />
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button onClick={handleSaveCharacter}>Save</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+            <Dialog open={locationOpen} onOpenChange={setLocationOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>
+                            {editingLocation ? 'Edit Location' : 'Add Location'}
+                        </DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                        <div>
+                            <Label htmlFor="loc-name">Name</Label>
+                            <Input
+                                id="loc-name"
+                                value={locName}
+                                onChange={(e) => setLocName(e.target.value)}
+                                placeholder="Location Name"
+                            />
+                        </div>
+                        <div>
+                            <Label htmlFor="loc-desc">Description</Label>
+                            <Textarea
+                                id="loc-desc"
+                                value={locDesc}
+                                onChange={(e) => setLocDesc(e.target.value)}
+                                placeholder="Geography, atmosphere, significance, etc."
+                            />
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button onClick={handleSaveLocation}>Save</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </AppLayout>
     );
 }

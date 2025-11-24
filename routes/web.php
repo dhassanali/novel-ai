@@ -25,6 +25,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('novels/{novel}/chapters/{chapter}/expand', [\App\Http\Controllers\ChapterController::class, 'expand'])->name('chapters.expand');
     Route::post('novels/{novel}/documents', [\App\Http\Controllers\SourceDocumentController::class, 'store'])->name('documents.store');
     Route::post('novels/{novel}/documents/link', [\App\Http\Controllers\SourceDocumentController::class, 'storeLink'])->name('documents.storeLink');
+
+    Route::post('novels/{novel}/characters', [\App\Http\Controllers\CharacterController::class, 'store'])->name('characters.store');
+    Route::put('novels/{novel}/characters/{character}', [\App\Http\Controllers\CharacterController::class, 'update'])->name('characters.update');
+    Route::delete('novels/{novel}/characters/{character}', [\App\Http\Controllers\CharacterController::class, 'destroy'])->name('characters.destroy');
+
+    Route::post('novels/{novel}/locations', [\App\Http\Controllers\LocationController::class, 'store'])->name('locations.store');
+    Route::put('novels/{novel}/locations/{location}', [\App\Http\Controllers\LocationController::class, 'update'])->name('locations.update');
+    Route::delete('novels/{novel}/locations/{location}', [\App\Http\Controllers\LocationController::class, 'destroy'])->name('locations.destroy');
 });
 
 require __DIR__ . '/settings.php';

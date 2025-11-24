@@ -44,89 +44,11 @@ services:
       timeout: 10s
       retries: 3
 
-  # Whisper - Speech to Text (ARM-compatible alternative)
-  whisper:
-    image: fedirz/faster-whisper-server:latest-cpu
-    container_name: local-ai-whisper
-    platform: linux/arm64  # Explicitly set for Apple Silicon
-    ports:
-      - "9000:8000"
-    environment:
-      - WHISPER_MODEL=base
-    volumes:
-      - whisper_cache:/root/.cache
-    restart: unless-stopped
-    networks:
-      - local-ai-network
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-
-  # Piper TTS - Text to Speech (ARM64 compatible)
-  coqui-tts:
-    image: ghcr.io/coqui-ai/tts:latest
-    container_name: local-ai-coqui-tts
-    platform: linux/arm64
-    ports:
-      - "5002:10200"
-    command: --voice en_US-lessac-medium
-    volumes:
-      - tts_cache:/data
-    restart: unless-stopped
-    networks:
-      - local-ai-network
-    healthcheck:
-      test: ["CMD", "nc", "-z", "localhost", "10200"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
-
-  # Optional: Redis for caching embeddings and responses
-#  redis:
-#    image: redis:7-alpine
-#    container_name: local-ai-redis
-#    ports:
-#      - "6379:6379"
-#    volumes:
-#      - redis_data:/data
-#    restart: unless-stopped
-#    networks:
-#      - local-ai-network
-#    command: redis-server --appendonly yes
-#    healthcheck:
-#      test: ["CMD", "redis-cli", "ping"]
-#      interval: 30s
-#      timeout: 10s
-#      retries: 3
-
-  # Optional: Nginx for load balancing multiple Ollama instances
-  # nginx:
-  #   image: nginx:alpine
-  #   container_name: local-ai-nginx
-  #   ports:
-  #     - "8080:80"
-  #   volumes:
-  #     - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-  #   depends_on:
-  #     - ollama
-  #   restart: unless-stopped
-  #   networks:
-  #     - local-ai-network
-
 volumes:
   ollama_data:
     driver: local
   qdrant_data:
     driver: local
-  whisper_cache:
-    driver: local
-  tts_cache:
-    driver: local
-#  redis_data:
-#    driver: local
 
 networks:
   local-ai-network:

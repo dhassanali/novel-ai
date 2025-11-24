@@ -271,7 +271,7 @@ export default function Show({ novel }: Props) {
         );
     };
 
-    const saveChapter = async () => {
+    const saveChapter = useCallback(async () => {
         if (!activeChapter) return;
         setSaveStatus('saving');
         try {
@@ -290,7 +290,7 @@ export default function Show({ novel }: Props) {
             setSaveStatus('unsaved');
             handleError(error);
         }
-    };
+    }, [activeChapter, content, novel.id]);
 
     // Auto-save effect
     useEffect(() => {
@@ -303,7 +303,7 @@ export default function Show({ novel }: Props) {
         }, 2000); // Auto-save after 2 seconds of inactivity
 
         return () => clearTimeout(timeoutId);
-    }, [content, activeChapter]);
+    }, [content, activeChapter, saveChapter]);
 
     const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];

@@ -36,6 +36,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('novels/{novel}/locations', [\App\Http\Controllers\LocationController::class, 'store'])->name('locations.store');
     Route::put('novels/{novel}/locations/{location}', [\App\Http\Controllers\LocationController::class, 'update'])->name('locations.update');
     Route::delete('novels/{novel}/locations/{location}', [\App\Http\Controllers\LocationController::class, 'destroy'])->name('locations.destroy');
+
+    Route::post('novels/{novel}/brainstorm', [\App\Http\Controllers\BrainstormController::class, 'generate'])->name('novels.brainstorm');
 });
 
 require __DIR__ . '/settings.php';

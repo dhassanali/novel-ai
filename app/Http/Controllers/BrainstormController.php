@@ -22,23 +22,20 @@ class BrainstormController extends Controller
         if ($context) {
             $prompt .= " Context: {$context}";
         }
-        $prompt .= " Provide the output as a simple list.";
+        $prompt .= " Provide the output as a simple numbered list.";
 
-        // $text = \App\Facades\LocalAI::generate($prompt);
-        // $suggestions = array_filter(explode("\n", $text));
+        $text = \App\Facades\LocalAI::generate($prompt);
 
-        $response = Http::withToken(config('services.openai.api_key'))
-            ->post('https://api.openai.com/v1/chat/completions', [
-                'model' => 'gpt-4',
-                'messages' => [
-                    ['role' => 'system', 'content' => 'You are a helpful creative writing assistant.'],
-                    ['role' => 'user', 'content' => $prompt],
-                ],
-            ]);
+        // Split by newlines and filter empty lines
+        $lines = array_filter(explode("\n", $text));
 
-        $text = $response->json('choices.0.message.content');
-        $suggestions = array_filter(explode("\n", $text));
+        // Clean up lines (remove numbering like "1. ", "- ", etc.)
+        $suggestions = array_map(function ($line) {
+            return preg_replace('/^[\d\.\-\s]+/', '', trim($line));
+        }, $lines);
 
+        // Filter out any empty strings after cleanup
+        $suggestions = array_values(array_filter($suggestions));
 
         return response()->json([
             'suggestions' => $suggestions,

@@ -76,12 +76,21 @@ export default function BrainstormTab({ novel }: BrainstormTabProps) {
                 disabled={generating}
                 className="w-full"
             >
-                {generating ? 'Generating...' : 'Brainstorm'}
-                <Lightbulb className="ml-2 h-4 w-4" />
+                {generating ? (
+                    <>
+                        Generating...
+                        <span className="ml-2 animate-spin">⏳</span>
+                    </>
+                ) : (
+                    <>
+                        Brainstorm
+                        <Lightbulb className="ml-2 h-4 w-4" />
+                    </>
+                )}
             </Button>
 
             <div className="flex-1 space-y-4 overflow-y-auto">
-                {suggestions.length > 0 && (
+                {suggestions.length > 0 ? (
                     <div className="space-y-2">
                         <h3 className="text-sm font-semibold text-muted-foreground">
                             Suggestions
@@ -120,6 +129,13 @@ export default function BrainstormTab({ novel }: BrainstormTabProps) {
                             ))}
                         </div>
                     </div>
+                ) : (
+                    !generating && (
+                        <div className="flex h-32 items-center justify-center text-center text-sm text-muted-foreground">
+                            Select a category and click Brainstorm to generate
+                            ideas.
+                        </div>
+                    )
                 )}
 
                 {keepers.length > 0 && (

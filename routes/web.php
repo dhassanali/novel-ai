@@ -18,6 +18,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::resource('novels', \App\Http\Controllers\NovelController::class);
     Route::post('novels/{novel}/cover', [\App\Http\Controllers\NovelController::class, 'uploadCover'])->name('novels.uploadCover');
     Route::delete('novels/{novel}/cover', [\App\Http\Controllers\NovelController::class, 'deleteCover'])->name('novels.deleteCover');
+    Route::get('novels/{novel}/export', [\App\Http\Controllers\NovelController::class, 'export'])->name('novels.export');
 
     Route::scopeBindings()->group(function () {
         Route::post('novels/{novel}/chapters', [\App\Http\Controllers\ChapterController::class, 'store'])->name('chapters.store');

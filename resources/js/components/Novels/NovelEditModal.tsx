@@ -20,6 +20,7 @@ interface NovelEditModalProps {
         title: string;
         genre: string;
         description: string;
+        word_count_goal: number | null;
     }) => void;
 }
 
@@ -32,11 +33,17 @@ export default function NovelEditModal({
     const [title, setTitle] = useState(novel.title);
     const [genre, setGenre] = useState(novel.genre || '');
     const [description, setDescription] = useState(novel.description || '');
+    const [wordCountGoal, setWordCountGoal] = useState<string>(
+        novel.word_count_goal ? String(novel.word_count_goal) : '',
+    );
 
     useEffect(() => {
         setTitle(novel.title);
         setGenre(novel.genre || '');
         setDescription(novel.description || '');
+        setWordCountGoal(
+            novel.word_count_goal ? String(novel.word_count_goal) : '',
+        );
     }, [novel, open]);
 
     const handleSave = () => {
@@ -44,6 +51,7 @@ export default function NovelEditModal({
             title,
             genre,
             description,
+            word_count_goal: wordCountGoal ? Number(wordCountGoal) : null,
         });
     };
 
@@ -78,6 +86,19 @@ export default function NovelEditModal({
                             value={description}
                             onChange={(e) => setDescription(e.target.value)}
                             placeholder="A brief summary of your novel..."
+                        />
+                    </div>
+                    <div>
+                        <Label htmlFor="novel-word-count-goal">
+                            Word Count Goal
+                        </Label>
+                        <Input
+                            id="novel-word-count-goal"
+                            type="number"
+                            min={1}
+                            value={wordCountGoal}
+                            onChange={(e) => setWordCountGoal(e.target.value)}
+                            placeholder="e.g. 80000"
                         />
                     </div>
                 </div>

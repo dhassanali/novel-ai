@@ -12,7 +12,7 @@ class Novel extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['title', 'description', 'genre', 'user_id', 'cover_image', 'total_word_count'];
+    protected $fillable = ['title', 'description', 'genre', 'user_id', 'cover_image', 'total_word_count', 'word_count_goal'];
 
     protected $appends = ['cover_image_url'];
 

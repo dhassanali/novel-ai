@@ -312,4 +312,105 @@ class NovelControllerTest extends TestCase
 
         $response->assertRedirect('/login');
     }
+
+    public function test_can_update_novel_word_count_goal(): void
+    {
+        $novel = Novel::factory()->create([
+            'user_id' => $this->user->id,
+            'title' => 'My Novel',
+        ]);
+
+        $response = $this->actingAs($this->user)
+            ->put("/novels/{$novel->id}", [
+                'title' => 'My Novel',
+                'word_count_goal' => 80000,
+            ]);
+
+        $response->assertRedirect();
+
+        $this->assertDatabaseHas('novels', [
+            'id' => $novel->id,
+            'word_count_goal' => 80000,
+        ]);
+    }
+
+    public function test_word_count_goal_must_be_positive_integer(): void
+    {
+        $novel = Novel::factory()->create([
+            'user_id' => $this->user->id,
+            'title' => 'My Novel',
+        ]);
+
+        $response = $this->actingAs($this->user)
+            ->putJson("/novels/{$novel->id}", [
+                'title' => 'My Novel',
+                'word_count_goal' => -1,
+            ]);
+
+        $response->assertStatus(422);
+        $response->assertJsonValidationErrors('word_count_goal');
+    }
+
+    public function test_can_export_novel_as_markdown(): void
+    {
+        $novel = Novel::factory()->create([
+            'user_id' => $this->user->id,
+            'title' => 'Export Test Novel',
+            'genre' => 'Fantasy',
+        ]);
+
+        Chapter::factory()->create([
+            'novel_id' => $novel->id,
+            'title' => 'The Beginning',
+            'content' => 'Once upon a time...',
+            'order' => 1,
+        ]);
+
+        Chapter::factory()->create([
+            'novel_id' => $novel->id,
+            'title' => 'The End',
+            'content' => 'And they lived happily ever after.',
+            'order' => 2,
+        ]);
+
+        $response = $this->actingAs($this->user)
+            ->get("/novels/{$novel->id}/export");
+
+        $response->assertOk();
+        $response->assertHeader('Content-Type', 'text/markdown; charset=UTF-8');
+
+        $content = $response->streamedContent();
+        $this->assertStringContainsString('# Export Test Novel', $content);
+        $this->assertStringContainsString('## The Beginning', $content);
+        $this->assertStringContainsString('Once upon a time...', $content);
+        $this->assertStringContainsString('## The End', $content);
+        $this->assertStringContainsString('And they lived happily ever after.', $content);
+    }
+
+    public function test_user_cannot_export_another_users_novel(): void
+    {
+        $otherUser = User::factory()->create();
+        $novel = Novel::factory()->create([
+            'user_id' => $otherUser->id,
+        ]);
+
+        $response = $this->actingAs($this->user)
+            ->get("/novels/{$novel->id}/export");
+
+        $response->assertForbidden();
+    }
+
+    public function test_export_filename_is_slugified_title(): void
+    {
+        $novel = Novel::factory()->create([
+            'user_id' => $this->user->id,
+            'title' => 'My Great Novel',
+        ]);
+
+        $response = $this->actingAs($this->user)
+            ->get("/novels/{$novel->id}/export");
+
+        $response->assertOk();
+        $this->assertStringContainsString('my-great-novel.md', $response->headers->get('Content-Disposition'));
+    }
 }

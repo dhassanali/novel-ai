@@ -14,6 +14,7 @@ import {
 } from '@/actions/App/Http/Controllers/LocationController';
 import {
     deleteCover,
+    exportMethod as exportNovelAction,
     update as updateNovel,
     uploadCover,
 } from '@/actions/App/Http/Controllers/NovelController';
@@ -159,10 +160,15 @@ export default function Show({ novel }: Props) {
         title: string;
         genre: string;
         description: string;
+        word_count_goal: number | null;
     }) => {
         router.put(updateNovel.url({ novel: novel.id }), data, {
             onSuccess: () => setEditNovelOpen(false),
         });
+    };
+
+    const handleExport = () => {
+        window.location.href = exportNovelAction.url({ novel: novel.id });
     };
 
     // Cover Image Handlers
@@ -193,18 +199,20 @@ export default function Show({ novel }: Props) {
     // Chapter Edit State
     const [editChapterOpen, setEditChapterOpen] = useState(false);
 
-    const handleUpdateChapterTitle = (title: string) => {
+    const handleUpdateChapter = (data: {
+        title: string;
+        status: import('@/types/novel').ChapterStatus;
+        pov_character_id: number | null;
+    }) => {
         if (!activeChapter) return;
         router.put(
             updateChapter.url({ novel: novel.id, chapter: activeChapter.id }),
-            {
-                title: title,
-            },
+            data,
             {
                 onSuccess: () => {
                     setEditChapterOpen(false);
                     setActiveChapter((prev) =>
-                        prev ? { ...prev, title: title } : null,
+                        prev ? { ...prev, ...data } : null,
                     );
                 },
             },
@@ -308,7 +316,8 @@ export default function Show({ novel }: Props) {
                 open={editChapterOpen}
                 onOpenChange={setEditChapterOpen}
                 chapter={activeChapter}
-                onSave={handleUpdateChapterTitle}
+                characters={novel.characters}
+                onSave={handleUpdateChapter}
             />
 
             <NovelEditModal
@@ -337,6 +346,7 @@ export default function Show({ novel }: Props) {
                         onDeleteCharacter={handleDeleteCharacter}
                         onManageLocation={openLocationModal}
                         onDeleteLocation={handleDeleteLocation}
+                        onExport={handleExport}
                     />
                 )}
 

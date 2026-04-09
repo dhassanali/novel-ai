@@ -2,10 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\ChapterStatus;
 use App\Models\Chapter;
 use App\Models\Novel;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rules\Enum;
 
 class ChapterController extends Controller
 {
@@ -33,6 +35,8 @@ class ChapterController extends Controller
         $validated = $request->validate([
             'title' => 'sometimes|string|max:255',
             'content' => 'nullable|string',
+            'status' => ['sometimes', new Enum(ChapterStatus::class)],
+            'pov_character_id' => 'sometimes|nullable|integer|exists:characters,id',
         ]);
 
         $chapter->update($validated);
@@ -73,7 +77,7 @@ class ChapterController extends Controller
     public function analyze(Request $request, Novel $novel, Chapter $chapter)
     {
         $this->authorize('update', $novel);
-        set_time_limit(120); // Increase timeout to 2 minutes
+        set_time_limit(120);
         $request->validate(['selection' => 'required|string']);
         $selection = $request->input('selection');
 
@@ -87,23 +91,21 @@ class ChapterController extends Controller
     public function suggest(Request $request, Novel $novel, Chapter $chapter)
     {
         $this->authorize('update', $novel);
-        set_time_limit(120); // Increase timeout to 2 minutes
+        set_time_limit(120);
         $request->validate(['context' => 'required|string']);
         $context = $request->input('context');
 
-        // Fetch previous chapters content
         $previousContent = $novel->chapters()
             ->where('order', '<', $chapter->order)
             ->orderBy('order', 'asc')
             ->pluck('content')
             ->implode("\n\n");
 
-        // Truncate previous content if too long (e.g., last 10000 chars)
         if (strlen($previousContent) > 10000) {
             $previousContent = '...'.substr($previousContent, -10000);
         }
 
-        $loreContext = $this->getLoreContext($novel);
+        $loreContext = $this->getLoreContext($novel, $chapter);
 
         $prompt = "Novel Title: {$novel->title}\nGenre: {$novel->genre}\nDescription: {$novel->description}\nChapter Title: {$chapter->title}\n\n{$loreContext}\n\nContinue the story based on the following context. Keep the style consistent.\n\nStory So Far:\n\"{$previousContent}\"\n\nCurrent Context:\n\"{$context}\"";
 
@@ -121,7 +123,7 @@ class ChapterController extends Controller
             'instruction' => 'required|string',
         ]);
 
-        $loreContext = $this->getLoreContext($novel);
+        $loreContext = $this->getLoreContext($novel, $chapter);
 
         $prompt = "Novel Title: {$novel->title}\nGenre: {$novel->genre}\nDescription: {$novel->description}\nChapter Title: {$chapter->title}\n\n{$loreContext}\n\nRewrite the following text based on these instructions: \"{$validated['instruction']}\".\n\nOriginal Text:\n\"{$validated['selection']}\"\n\nRewritten Text:";
 
@@ -138,7 +140,7 @@ class ChapterController extends Controller
             'selection' => 'required|string',
         ]);
 
-        $loreContext = $this->getLoreContext($novel);
+        $loreContext = $this->getLoreContext($novel, $chapter);
 
         $prompt = "Novel Title: {$novel->title}\nGenre: {$novel->genre}\nDescription: {$novel->description}\nChapter Title: {$chapter->title}\n\n{$loreContext}\n\nExpand the following summary or short text into a full, detailed scene. Include dialogue, sensory details, and internal monologue where appropriate.\n\nSummary:\n\"{$validated['selection']}\"\n\nExpanded Scene:";
 
@@ -147,7 +149,7 @@ class ChapterController extends Controller
         return response()->json(['expanded' => $expanded]);
     }
 
-    private function getLoreContext(Novel $novel): string
+    private function getLoreContext(Novel $novel, ?Chapter $chapter = null): string
     {
         $characters = $novel->characters()->get()->map(function ($char) {
             return "- {$char->name} ({$char->role}): {$char->description}";
@@ -158,6 +160,14 @@ class ChapterController extends Controller
         })->implode("\n");
 
         $context = '';
+
+        if ($chapter?->pov_character_id) {
+            $pov = $novel->characters()->find($chapter->pov_character_id);
+            if ($pov) {
+                $context .= "POV Character (write this chapter from their perspective): {$pov->name}\n\n";
+            }
+        }
+
         if (! empty($characters)) {
             $context .= "Characters:\n{$characters}\n\n";
         }

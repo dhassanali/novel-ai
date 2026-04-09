@@ -4,33 +4,32 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Chapter extends Model
 {
     use HasFactory;
+
     protected $fillable = ['novel_id', 'title', 'content', 'order', 'word_count'];
 
-    protected static function booted()
+    protected static function booted(): void
     {
-        static::saving(function ($chapter) {
-            // Auto-calculate word count when content changes
+        static::saving(function (Chapter $chapter) {
             if ($chapter->isDirty('content')) {
                 $chapter->word_count = $chapter->calculateWordCount();
             }
         });
 
-        static::saved(function ($chapter) {
-            // Update novel's total word count
+        static::saved(function (Chapter $chapter) {
             $chapter->novel->updateTotalWordCount();
         });
 
-        static::deleted(function ($chapter) {
-            // Update novel's total word count when chapter is deleted
+        static::deleted(function (Chapter $chapter) {
             $chapter->novel->updateTotalWordCount();
         });
     }
 
-    public function novel()
+    public function novel(): BelongsTo
     {
         return $this->belongsTo(Novel::class);
     }

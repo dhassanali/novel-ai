@@ -2,15 +2,18 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-
 use App\Models\Chapter;
 use App\Models\Novel;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Illuminate\Http\Request;
 
 class ChapterController extends Controller
 {
+    use AuthorizesRequests;
+
     public function store(Request $request, Novel $novel)
     {
+        $this->authorize('update', $novel);
         $validated = $request->validate([
             'title' => 'required|string|max:255',
         ]);
@@ -25,6 +28,8 @@ class ChapterController extends Controller
 
     public function update(Request $request, Novel $novel, Chapter $chapter)
     {
+        $this->authorize('update', $novel);
+
         $validated = $request->validate([
             'title' => 'sometimes|string|max:255',
             'content' => 'nullable|string',
@@ -41,6 +46,7 @@ class ChapterController extends Controller
 
     public function generate(Request $request, Novel $novel, Chapter $chapter)
     {
+        $this->authorize('update', $novel);
         $request->validate([
             'prompt' => 'required|string',
             'mode' => 'sometimes|string|in:context,web',
@@ -54,8 +60,8 @@ class ChapterController extends Controller
         } else {
             $filter = [
                 'must' => [
-                    ['key' => 'collection', 'match' => ['value' => 'novel_' . $novel->id]]
-                ]
+                    ['key' => 'collection', 'match' => ['value' => 'novel_'.$novel->id]],
+                ],
             ];
 
             $generatedText = \App\Facades\LocalAI::askDocuments($prompt, 3, $filter);
@@ -66,6 +72,7 @@ class ChapterController extends Controller
 
     public function analyze(Request $request, Novel $novel, Chapter $chapter)
     {
+        $this->authorize('update', $novel);
         set_time_limit(120); // Increase timeout to 2 minutes
         $request->validate(['selection' => 'required|string']);
         $selection = $request->input('selection');
@@ -79,6 +86,7 @@ class ChapterController extends Controller
 
     public function suggest(Request $request, Novel $novel, Chapter $chapter)
     {
+        $this->authorize('update', $novel);
         set_time_limit(120); // Increase timeout to 2 minutes
         $request->validate(['context' => 'required|string']);
         $context = $request->input('context');
@@ -92,7 +100,7 @@ class ChapterController extends Controller
 
         // Truncate previous content if too long (e.g., last 10000 chars)
         if (strlen($previousContent) > 10000) {
-            $previousContent = '...' . substr($previousContent, -10000);
+            $previousContent = '...'.substr($previousContent, -10000);
         }
 
         $loreContext = $this->getLoreContext($novel);
@@ -106,6 +114,7 @@ class ChapterController extends Controller
 
     public function rewrite(Request $request, Novel $novel, Chapter $chapter)
     {
+        $this->authorize('update', $novel);
         set_time_limit(120);
         $validated = $request->validate([
             'selection' => 'required|string',
@@ -123,6 +132,7 @@ class ChapterController extends Controller
 
     public function expand(Request $request, Novel $novel, Chapter $chapter)
     {
+        $this->authorize('update', $novel);
         set_time_limit(120);
         $validated = $request->validate([
             'selection' => 'required|string',
@@ -137,7 +147,7 @@ class ChapterController extends Controller
         return response()->json(['expanded' => $expanded]);
     }
 
-    private function getLoreContext(Novel $novel)
+    private function getLoreContext(Novel $novel): string
     {
         $characters = $novel->characters()->get()->map(function ($char) {
             return "- {$char->name} ({$char->role}): {$char->description}";
@@ -147,11 +157,11 @@ class ChapterController extends Controller
             return "- {$loc->name}: {$loc->description}";
         })->implode("\n");
 
-        $context = "";
-        if (!empty($characters)) {
+        $context = '';
+        if (! empty($characters)) {
             $context .= "Characters:\n{$characters}\n\n";
         }
-        if (!empty($locations)) {
+        if (! empty($locations)) {
             $context .= "Locations:\n{$locations}\n\n";
         }
 

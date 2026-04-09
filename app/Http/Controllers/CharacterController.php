@@ -2,15 +2,18 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-
 use App\Models\Character;
 use App\Models\Novel;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Illuminate\Http\Request;
 
 class CharacterController extends Controller
 {
+    use AuthorizesRequests;
+
     public function store(Request $request, Novel $novel)
     {
+        $this->authorize('update', $novel);
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
@@ -24,6 +27,7 @@ class CharacterController extends Controller
 
     public function update(Request $request, Novel $novel, Character $character)
     {
+        $this->authorize('update', $novel);
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
@@ -37,6 +41,7 @@ class CharacterController extends Controller
 
     public function destroy(Novel $novel, Character $character)
     {
+        $this->authorize('update', $novel);
         $character->delete();
 
         return back();

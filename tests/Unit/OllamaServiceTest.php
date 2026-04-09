@@ -117,7 +117,7 @@ class OllamaServiceTest extends TestCase
 
         $service = $this->createMockService([
             new Response(200, [], json_encode([
-                'embedding' => $expectedEmbedding,
+                'embeddings' => [$expectedEmbedding],
             ])),
         ]);
 
@@ -127,14 +127,30 @@ class OllamaServiceTest extends TestCase
         $this->assertCount(1, $this->requestHistory);
 
         $request = $this->requestHistory[0]['request'];
-        $this->assertStringContainsString('/api/embeddings', $request->getUri()->getPath());
+        $this->assertStringContainsString('/api/embed', $request->getUri()->getPath());
+    }
+
+    public function test_embed_sends_input_field(): void
+    {
+        $service = $this->createMockService([
+            new Response(200, [], json_encode([
+                'embeddings' => [[0.1, 0.2]],
+            ])),
+        ]);
+
+        $service->embed('Test text');
+
+        $body = json_decode($this->requestHistory[0]['request']->getBody()->getContents(), true);
+        $this->assertArrayHasKey('input', $body);
+        $this->assertArrayNotHasKey('prompt', $body);
+        $this->assertEquals('Test text', $body['input']);
     }
 
     public function test_embed_uses_custom_model(): void
     {
         $service = $this->createMockService([
             new Response(200, [], json_encode([
-                'embedding' => [0.1, 0.2],
+                'embeddings' => [[0.1, 0.2]],
             ])),
         ]);
 
@@ -152,7 +168,7 @@ class OllamaServiceTest extends TestCase
         $service = $this->createMockService([
             new RequestException(
                 'Error',
-                new Request('POST', '/api/embeddings')
+                new Request('POST', '/api/embed')
             ),
         ]);
 

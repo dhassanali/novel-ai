@@ -108,10 +108,10 @@ class OllamaService
         $model = $model ?? 'nomic-embed-text';
 
         try {
-            $response = $this->client->post('/api/embeddings', [
+            $response = $this->client->post('/api/embed', [
                 'json' => [
                     'model' => $model,
-                    'prompt' => $text,
+                    'input' => $text,
                 ],
             ]);
 
@@ -119,7 +119,7 @@ class OllamaService
 
             $this->logUsage('embed', $model, $body);
 
-            return $body['embedding'] ?? [];
+            return $body['embeddings'][0] ?? [];
         } catch (GuzzleException $e) {
             $this->logError('embed', $e);
             throw new \RuntimeException("Failed to create embedding: {$e->getMessage()}", 0, $e);

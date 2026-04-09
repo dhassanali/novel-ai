@@ -3,6 +3,16 @@ import {
     update as updateChapter,
 } from '@/actions/App/Http/Controllers/ChapterController';
 import {
+    destroy as destroyCharacter,
+    store as storeCharacter,
+    update as updateCharacter,
+} from '@/actions/App/Http/Controllers/CharacterController';
+import {
+    destroy as destroyLocation,
+    store as storeLocation,
+    update as updateLocation,
+} from '@/actions/App/Http/Controllers/LocationController';
+import {
     deleteCover,
     update as updateNovel,
     uploadCover,
@@ -90,14 +100,14 @@ export default function Show({ novel }: Props) {
     const handleSaveCharacter = (data: Partial<Character>) => {
         if (editingCharacter) {
             router.put(
-                `/novels/${novel.id}/characters/${editingCharacter.id}`,
+                updateCharacter.url({ novel: novel.id, character: editingCharacter.id }),
                 data,
                 {
                     onSuccess: () => setCharacterOpen(false),
                 },
             );
         } else {
-            router.post(`/novels/${novel.id}/characters`, data, {
+            router.post(storeCharacter.url({ novel: novel.id }), data, {
                 onSuccess: () => setCharacterOpen(false),
             });
         }
@@ -105,7 +115,7 @@ export default function Show({ novel }: Props) {
 
     const handleDeleteCharacter = (char: Character) => {
         if (confirm('Are you sure you want to delete this character?')) {
-            router.delete(`/novels/${novel.id}/characters/${char.id}`);
+            router.delete(destroyCharacter.url({ novel: novel.id, character: char.id }));
         }
     };
 
@@ -123,14 +133,14 @@ export default function Show({ novel }: Props) {
     const handleSaveLocation = (data: Partial<Location>) => {
         if (editingLocation) {
             router.put(
-                `/novels/${novel.id}/locations/${editingLocation.id}`,
+                updateLocation.url({ novel: novel.id, location: editingLocation.id }),
                 data,
                 {
                     onSuccess: () => setLocationOpen(false),
                 },
             );
         } else {
-            router.post(`/novels/${novel.id}/locations`, data, {
+            router.post(storeLocation.url({ novel: novel.id }), data, {
                 onSuccess: () => setLocationOpen(false),
             });
         }
@@ -138,7 +148,7 @@ export default function Show({ novel }: Props) {
 
     const handleDeleteLocation = (loc: Location) => {
         if (confirm('Are you sure you want to delete this location?')) {
-            router.delete(`/novels/${novel.id}/locations/${loc.id}`);
+            router.delete(destroyLocation.url({ novel: novel.id, location: loc.id }));
         }
     };
 

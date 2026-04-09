@@ -2,10 +2,9 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-
 use App\Models\Novel;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 
@@ -16,7 +15,7 @@ class NovelController extends Controller
     public function index()
     {
         return Inertia::render('Novels/Index', [
-            'novels' => Novel::where('user_id', auth()->id())->latest()->get()
+            'novels' => Novel::where('user_id', auth()->id())->latest()->get(),
         ]);
     }
 
@@ -40,10 +39,12 @@ class NovelController extends Controller
     {
         $this->authorize('view', $novel);
 
+        Inertia::encryptHistory();
+
         $novel->load(['chapters', 'sourceDocuments', 'characters', 'locations']);
 
         return Inertia::render('Novels/Show', [
-            'novel' => $novel
+            'novel' => $novel,
         ]);
     }
 
@@ -72,6 +73,7 @@ class NovelController extends Controller
         }
 
         $novel->delete();
+
         return to_route('novels.index');
     }
 

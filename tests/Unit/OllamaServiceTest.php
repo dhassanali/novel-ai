@@ -143,7 +143,29 @@ class OllamaServiceTest extends TestCase
         $body = json_decode($this->requestHistory[0]['request']->getBody()->getContents(), true);
         $this->assertArrayHasKey('input', $body);
         $this->assertArrayNotHasKey('prompt', $body);
-        $this->assertEquals('Test text', $body['input']);
+        // embed() wraps the string in an array before calling the batch endpoint
+        $this->assertEquals(['Test text'], $body['input']);
+    }
+
+    public function test_embed_batch_sends_multiple_inputs(): void
+    {
+        $texts = ['First text', 'Second text', 'Third text'];
+        $embeddings = [array_fill(0, 768, 0.1), array_fill(0, 768, 0.2), array_fill(0, 768, 0.3)];
+
+        $service = $this->createMockService([
+            new Response(200, [], json_encode([
+                'embeddings' => $embeddings,
+            ])),
+        ]);
+
+        $result = $service->embedBatch($texts);
+
+        $this->assertCount(3, $result);
+        $this->assertEquals($embeddings, $result);
+
+        $body = json_decode($this->requestHistory[0]['request']->getBody()->getContents(), true);
+        $this->assertEquals($texts, $body['input']);
+        $this->assertStringContainsString('/api/embed', $this->requestHistory[0]['request']->getUri()->getPath());
     }
 
     public function test_embed_uses_custom_model(): void

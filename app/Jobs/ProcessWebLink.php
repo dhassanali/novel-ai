@@ -70,21 +70,24 @@ class ProcessWebLink implements ShouldQueue
             // 3. Chunk text
             $chunks = $this->chunkText($text, 1000);
 
-            // 4. Embed and store
-            $points = [];
-            foreach ($chunks as $index => $chunk) {
-                // Additional sanitization before embedding to ensure json_encode compatibility
-                $chunk = $this->sanitizeForJson($chunk);
+            // 4. Sanitize chunks and filter empty ones
+            $cleanChunks = array_values(array_filter(
+                array_map(fn (string $chunk) => $this->sanitizeForJson($chunk), $chunks),
+                fn (string $chunk) => trim($chunk) !== '',
+            ));
 
-                if (empty(trim($chunk))) {
-                    continue; // Skip empty chunks
-                }
+            if (empty($cleanChunks)) {
+                throw new \Exception('No embeddable content found at URL');
+            }
 
-                $embedding = \App\Facades\LocalAI::embed($chunk);
+            // 5. Embed all chunks in a single batch API request
+            $embeddings = \App\Facades\LocalAI::embedBatch($cleanChunks);
 
-                $points[] = [
+            // 6. Build and store points
+            foreach ($cleanChunks as $index => $chunk) {
+                $qdrant->upsert([
                     'id' => \Ramsey\Uuid\Uuid::uuid4()->toString(),
-                    'vector' => $embedding,
+                    'vector' => $embeddings[$index] ?? [],
                     'payload' => [
                         'novel_id' => $this->document->novel_id,
                         'source_id' => $this->document->id,
@@ -93,13 +96,7 @@ class ProcessWebLink implements ShouldQueue
                         'url' => $this->document->path,
                         'collection' => 'novel_'.$this->document->novel_id,
                     ],
-                ];
-            }
-
-            if (! empty($points)) {
-                foreach ($points as $point) {
-                    $qdrant->upsert($point);
-                }
+                ]);
             }
 
             $this->document->update(['status' => 'completed']);

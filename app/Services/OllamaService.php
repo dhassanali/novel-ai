@@ -105,24 +105,35 @@ class OllamaService
      */
     public function embed(string $text, ?string $model = null): array
     {
+        return $this->embedBatch([$text], $model)[0] ?? [];
+    }
+
+    /**
+     * Create embeddings for multiple texts in a single request.
+     *
+     * @param  string[]  $texts
+     * @return array[]
+     */
+    public function embedBatch(array $texts, ?string $model = null): array
+    {
         $model = $model ?? 'nomic-embed-text';
 
         try {
             $response = $this->client->post('/api/embed', [
                 'json' => [
                     'model' => $model,
-                    'input' => $text,
+                    'input' => $texts,
                 ],
             ]);
 
             $body = json_decode($response->getBody()->getContents(), true);
 
-            $this->logUsage('embed', $model, $body);
+            $this->logUsage('embedBatch', $model, $body);
 
-            return $body['embeddings'][0] ?? [];
+            return $body['embeddings'] ?? [];
         } catch (GuzzleException $e) {
-            $this->logError('embed', $e);
-            throw new \RuntimeException("Failed to create embedding: {$e->getMessage()}", 0, $e);
+            $this->logError('embedBatch', $e);
+            throw new \RuntimeException("Failed to create embeddings: {$e->getMessage()}", 0, $e);
         }
     }
 

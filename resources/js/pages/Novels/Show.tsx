@@ -24,7 +24,9 @@ import {
 } from '@/actions/App/Http/Controllers/SourceDocumentController';
 import ChapterEditModal from '@/components/Novels/ChapterEditModal';
 import ChapterEditor from '@/components/Novels/ChapterEditor';
+import CharacterChatModal from '@/components/Novels/CharacterChatModal';
 import CharacterModal from '@/components/Novels/CharacterModal';
+import ConsistencyModal from '@/components/Novels/ConsistencyModal';
 import LocationModal from '@/components/Novels/LocationModal';
 import NovelEditModal from '@/components/Novels/NovelEditModal';
 import NovelSidebar from '@/components/Novels/NovelSidebar';
@@ -120,6 +122,15 @@ export default function Show({ novel }: Props) {
         }
     };
 
+    // Character Chat State
+    const [chatOpen, setChatOpen] = useState(false);
+    const [chattingCharacter, setChattingCharacter] = useState<Character | null>(null);
+
+    const openChatModal = (char: Character) => {
+        setChattingCharacter(char);
+        setChatOpen(true);
+    };
+
     // Location State
     const [locationOpen, setLocationOpen] = useState(false);
     const [editingLocation, setEditingLocation] = useState<Location | null>(
@@ -170,6 +181,9 @@ export default function Show({ novel }: Props) {
     const handleExport = () => {
         window.location.href = exportNovelAction.url({ novel: novel.id });
     };
+
+    // Consistency Check State
+    const [consistencyOpen, setConsistencyOpen] = useState(false);
 
     // Cover Image Handlers
     const handleCoverUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -327,6 +341,28 @@ export default function Show({ novel }: Props) {
                 onSave={handleUpdateNovel}
             />
 
+            <CharacterModal
+                open={characterOpen}
+                onOpenChange={setCharacterOpen}
+                character={editingCharacter}
+                novel={novel}
+                onSave={handleSaveCharacter}
+                onOpenChat={openChatModal}
+            />
+
+            <CharacterChatModal
+                open={chatOpen}
+                onOpenChange={setChatOpen}
+                character={chattingCharacter}
+                novel={novel}
+            />
+
+            <ConsistencyModal
+                open={consistencyOpen}
+                onOpenChange={setConsistencyOpen}
+                novel={novel}
+            />
+
             <div className="flex h-[calc(100vh-4rem)]">
                 {showSidebar && (
                     <NovelSidebar
@@ -344,9 +380,11 @@ export default function Show({ novel }: Props) {
                         onAddLink={handleAddLink}
                         onManageCharacter={openCharacterModal}
                         onDeleteCharacter={handleDeleteCharacter}
+                        onChatCharacter={openChatModal}
                         onManageLocation={openLocationModal}
                         onDeleteLocation={handleDeleteLocation}
                         onExport={handleExport}
+                        onOpenConsistencyCheck={() => setConsistencyOpen(true)}
                     />
                 )}
 
@@ -363,20 +401,6 @@ export default function Show({ novel }: Props) {
                     aiHandlers={aiHandlers}
                 />
             </div>
-
-            <CharacterModal
-                open={characterOpen}
-                onOpenChange={setCharacterOpen}
-                character={editingCharacter}
-                onSave={handleSaveCharacter}
-            />
-
-            <LocationModal
-                open={locationOpen}
-                onOpenChange={setLocationOpen}
-                location={editingLocation}
-                onSave={handleSaveLocation}
-            />
         </AppLayout>
     );
 }

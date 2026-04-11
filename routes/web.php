@@ -32,6 +32,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('novels/{novel}/characters', [\App\Http\Controllers\CharacterController::class, 'store'])->name('characters.store');
         Route::put('novels/{novel}/characters/{character}', [\App\Http\Controllers\CharacterController::class, 'update'])->name('characters.update');
         Route::delete('novels/{novel}/characters/{character}', [\App\Http\Controllers\CharacterController::class, 'destroy'])->name('characters.destroy');
+        Route::post('novels/{novel}/characters/{character}/relationships', [\App\Http\Controllers\CharacterController::class, 'storeRelationship'])->name('characters.relationships.store');
+        Route::delete('novels/{novel}/characters/{character}/relationships/{relationship}', [\App\Http\Controllers\CharacterController::class, 'destroyRelationship'])->name('characters.relationships.destroy');
+        Route::post('novels/{novel}/characters/{character}/chat', [\App\Http\Controllers\CharacterChatController::class, 'chat'])->name('characters.chat');
 
         Route::post('novels/{novel}/locations', [\App\Http\Controllers\LocationController::class, 'store'])->name('locations.store');
         Route::put('novels/{novel}/locations/{location}', [\App\Http\Controllers\LocationController::class, 'update'])->name('locations.update');
@@ -42,6 +45,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('novels/{novel}/documents/link', [\App\Http\Controllers\SourceDocumentController::class, 'storeLink'])->name('documents.storeLink');
 
     Route::post('novels/{novel}/brainstorm', [\App\Http\Controllers\BrainstormController::class, 'generate'])->name('novels.brainstorm');
+    Route::post('novels/{novel}/consistency-check', [\App\Http\Controllers\ConsistencyController::class, 'check'])->name('novels.consistencyCheck');
 });
 
 require __DIR__.'/settings.php';

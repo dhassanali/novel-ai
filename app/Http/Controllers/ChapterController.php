@@ -151,9 +151,34 @@ class ChapterController extends Controller
 
     private function getLoreContext(Novel $novel, ?Chapter $chapter = null): string
     {
-        $characters = $novel->characters()->get()->map(function ($char) {
-            return "- {$char->name} ({$char->role}): {$char->description}";
+        $characters = $novel->characters()->with('relationships.relatedCharacter')->get();
+
+        $characterLines = $characters->map(function ($char) {
+            $lines = ["- {$char->name} ({$char->role}): {$char->description}"];
+
+            if (! empty($char->personality_traits)) {
+                $lines[] = "  Personality: {$char->personality_traits}";
+            }
+            if (! empty($char->backstory)) {
+                $lines[] = "  Backstory: {$char->backstory}";
+            }
+            if (! empty($char->goals)) {
+                $lines[] = "  Goals: {$char->goals}";
+            }
+            if (! empty($char->speech_patterns)) {
+                $lines[] = "  Speech patterns: {$char->speech_patterns}";
+            }
+
+            return implode("\n", $lines);
         })->implode("\n");
+
+        $relationshipLines = $characters->flatMap(function ($char) {
+            return $char->relationships->map(function ($rel) use ($char) {
+                $desc = $rel->description ? " — {$rel->description}" : '';
+
+                return "- {$char->name} ↔ {$rel->relatedCharacter->name} ({$rel->type}){$desc}";
+            });
+        })->unique()->implode("\n");
 
         $locations = $novel->locations()->get()->map(function ($loc) {
             return "- {$loc->name}: {$loc->description}";
@@ -162,14 +187,17 @@ class ChapterController extends Controller
         $context = '';
 
         if ($chapter?->pov_character_id) {
-            $pov = $novel->characters()->find($chapter->pov_character_id);
+            $pov = $characters->find($chapter->pov_character_id);
             if ($pov) {
                 $context .= "POV Character (write this chapter from their perspective): {$pov->name}\n\n";
             }
         }
 
-        if (! empty($characters)) {
-            $context .= "Characters:\n{$characters}\n\n";
+        if (! empty($characterLines)) {
+            $context .= "Characters:\n{$characterLines}\n\n";
+        }
+        if (! empty($relationshipLines)) {
+            $context .= "Character Relationships:\n{$relationshipLines}\n\n";
         }
         if (! empty($locations)) {
             $context .= "Locations:\n{$locations}\n\n";

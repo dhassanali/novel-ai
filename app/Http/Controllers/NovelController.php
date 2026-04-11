@@ -41,7 +41,7 @@ class NovelController extends Controller
 
         Inertia::encryptHistory();
 
-        $novel->load(['chapters', 'sourceDocuments', 'characters', 'locations']);
+        $novel->load(['chapters', 'sourceDocuments', 'characters.relationships.relatedCharacter', 'locations']);
 
         return Inertia::render('Novels/Show', [
             'novel' => $novel,

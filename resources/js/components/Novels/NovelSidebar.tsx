@@ -24,8 +24,10 @@ import {
     Globe,
     Lightbulb,
     MapPin,
+    MessageSquare,
     Pencil,
     Plus,
+    ShieldCheck,
     Trash2,
     Upload,
     User,
@@ -45,9 +47,11 @@ interface NovelSidebarProps {
     onAddLink: (url: string) => void;
     onManageCharacter: (char?: Character) => void;
     onDeleteCharacter: (char: Character) => void;
+    onChatCharacter: (char: Character) => void;
     onManageLocation: (loc?: Location) => void;
     onDeleteLocation: (loc: Location) => void;
     onExport: () => void;
+    onOpenConsistencyCheck: () => void;
 }
 
 type Tab = 'chapters' | 'characters' | 'locations' | 'sources' | 'brainstorm';
@@ -76,9 +80,11 @@ export default function NovelSidebar({
     onAddLink,
     onManageCharacter,
     onDeleteCharacter,
+    onChatCharacter,
     onManageLocation,
     onDeleteLocation,
     onExport,
+    onOpenConsistencyCheck,
 }: NovelSidebarProps) {
     const coverInputRef = useRef<HTMLInputElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -149,6 +155,21 @@ export default function NovelSidebar({
                             </h2>
                             <div className="flex shrink-0 items-center gap-1">
                                 <TooltipProvider>
+                                    <Tooltip>
+                                        <TooltipTrigger asChild>
+                                            <Button
+                                                size="icon"
+                                                variant="ghost"
+                                                className="h-6 w-6"
+                                                onClick={onOpenConsistencyCheck}
+                                            >
+                                                <ShieldCheck className="h-3 w-3" />
+                                            </Button>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                            Story Consistency Check
+                                        </TooltipContent>
+                                    </Tooltip>
                                     <Tooltip>
                                         <TooltipTrigger asChild>
                                             <Button
@@ -409,14 +430,31 @@ export default function NovelSidebar({
                                         <User className="h-3 w-3" />
                                         <span>{char.name}</span>
                                     </div>
-                                    <Button
-                                        size="icon"
-                                        variant="ghost"
-                                        className="h-4 w-4 opacity-0 group-hover:opacity-100"
-                                        onClick={() => onDeleteCharacter(char)}
-                                    >
-                                        <Trash2 className="h-3 w-3 text-destructive" />
-                                    </Button>
+                                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100">
+                                        <TooltipProvider>
+                                            <Tooltip>
+                                                <TooltipTrigger asChild>
+                                                    <Button
+                                                        size="icon"
+                                                        variant="ghost"
+                                                        className="h-4 w-4"
+                                                        onClick={() => onChatCharacter(char)}
+                                                    >
+                                                        <MessageSquare className="h-3 w-3" />
+                                                    </Button>
+                                                </TooltipTrigger>
+                                                <TooltipContent>Talk to {char.name}</TooltipContent>
+                                            </Tooltip>
+                                        </TooltipProvider>
+                                        <Button
+                                            size="icon"
+                                            variant="ghost"
+                                            className="h-4 w-4"
+                                            onClick={() => onDeleteCharacter(char)}
+                                        >
+                                            <Trash2 className="h-3 w-3 text-destructive" />
+                                        </Button>
+                                    </div>
                                 </div>
                             ))}
                             {(!novel.characters ||

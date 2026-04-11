@@ -351,6 +351,107 @@ class ChapterControllerTest extends TestCase
         $response->assertOk();
     }
 
+    public function test_can_update_chapter_status(): void
+    {
+        $response = $this->actingAs($this->user)
+            ->put("/novels/{$this->novel->id}/chapters/{$this->chapter->id}", [
+                'status' => 'writing',
+            ]);
+
+        $response->assertRedirect();
+
+        $this->assertDatabaseHas('chapters', [
+            'id' => $this->chapter->id,
+            'status' => 'writing',
+        ]);
+    }
+
+    public function test_invalid_status_is_rejected(): void
+    {
+        $response = $this->actingAs($this->user)
+            ->putJson("/novels/{$this->novel->id}/chapters/{$this->chapter->id}", [
+                'status' => 'invalid_status',
+            ]);
+
+        $response->assertStatus(422);
+        $response->assertJsonValidationErrors('status');
+    }
+
+    public function test_can_update_chapter_pov_character(): void
+    {
+        $character = Character::factory()->create([
+            'novel_id' => $this->novel->id,
+        ]);
+
+        $response = $this->actingAs($this->user)
+            ->put("/novels/{$this->novel->id}/chapters/{$this->chapter->id}", [
+                'pov_character_id' => $character->id,
+            ]);
+
+        $response->assertRedirect();
+
+        $this->assertDatabaseHas('chapters', [
+            'id' => $this->chapter->id,
+            'pov_character_id' => $character->id,
+        ]);
+    }
+
+    public function test_can_clear_pov_character(): void
+    {
+        $character = Character::factory()->create([
+            'novel_id' => $this->novel->id,
+        ]);
+
+        $this->chapter->update(['pov_character_id' => $character->id]);
+
+        $response = $this->actingAs($this->user)
+            ->put("/novels/{$this->novel->id}/chapters/{$this->chapter->id}", [
+                'pov_character_id' => null,
+            ]);
+
+        $response->assertRedirect();
+
+        $this->assertDatabaseHas('chapters', [
+            'id' => $this->chapter->id,
+            'pov_character_id' => null,
+        ]);
+    }
+
+    public function test_pov_character_must_exist(): void
+    {
+        $response = $this->actingAs($this->user)
+            ->putJson("/novels/{$this->novel->id}/chapters/{$this->chapter->id}", [
+                'pov_character_id' => 99999,
+            ]);
+
+        $response->assertStatus(422);
+        $response->assertJsonValidationErrors('pov_character_id');
+    }
+
+    public function test_suggest_includes_pov_character_in_prompt(): void
+    {
+        $character = Character::factory()->create([
+            'novel_id' => $this->novel->id,
+            'name' => 'POV Hero',
+            'role' => 'Protagonist',
+        ]);
+
+        $this->chapter->update(['pov_character_id' => $character->id]);
+
+        \App\Facades\LocalAI::shouldReceive('generate')
+            ->once()
+            ->withArgs(function (string $prompt) {
+                return str_contains($prompt, 'POV Hero') && str_contains($prompt, 'POV Character');
+            })
+            ->andReturn('Story from POV');
+
+        $this->actingAs($this->user)
+            ->postJson("/novels/{$this->novel->id}/chapters/{$this->chapter->id}/suggest", [
+                'context' => 'Current context',
+            ])
+            ->assertOk();
+    }
+
     public function test_guest_cannot_access_chapter_endpoints(): void
     {
         $this->postJson("/novels/{$this->novel->id}/chapters/{$this->chapter->id}/generate", [

@@ -3,13 +3,16 @@
 namespace App\Http\Controllers;
 
 use App\Models\Novel;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Http;
 
 class BrainstormController extends Controller
 {
+    use AuthorizesRequests;
+
     public function generate(Request $request, Novel $novel)
     {
+        $this->authorize('view', $novel);
         $request->validate([
             'category' => 'required|string',
             'context' => 'nullable|string',
@@ -22,7 +25,7 @@ class BrainstormController extends Controller
         if ($context) {
             $prompt .= " Context: {$context}";
         }
-        $prompt .= " Provide the output as a simple numbered list.";
+        $prompt .= ' Provide the output as a simple numbered list.';
 
         $text = \App\Facades\LocalAI::generate($prompt);
 

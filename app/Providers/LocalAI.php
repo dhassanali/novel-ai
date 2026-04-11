@@ -14,8 +14,7 @@ class LocalAI
         protected QdrantService $qdrant,
         protected WhisperService $whisper,
         protected CoquiService $coqui
-    ) {
-    }
+    ) {}
 
     /**
      * Generate text using LLM.
@@ -39,6 +38,17 @@ class LocalAI
     public function embed(string $text, ?string $model = null): array
     {
         return $this->ollama->embed($text, $model);
+    }
+
+    /**
+     * Create embeddings for multiple texts in a single API request.
+     *
+     * @param  string[]  $texts
+     * @return array[]
+     */
+    public function embedBatch(array $texts, ?string $model = null): array
+    {
+        return $this->ollama->embedBatch($texts, $model);
     }
 
     /**
@@ -81,7 +91,7 @@ class LocalAI
         $prompt = "Based on the following context, answer the question.\n\n";
         $prompt .= "Context:\n{$context}\n\n";
         $prompt .= "Question: {$question}\n\n";
-        $prompt .= "Answer:";
+        $prompt .= 'Answer:';
 
         return $this->generate($prompt);
     }
@@ -138,7 +148,7 @@ class LocalAI
             'ollama' => $this->ollama->health(),
             'qdrant' => $this->qdrant->health(),
             'whisper' => $this->whisper->health(),
-             'coqui' => $this->coqui->health(),
+            'coqui' => $this->coqui->health(),
         ];
     }
 
@@ -234,7 +244,7 @@ class LocalAI
         ?string $collection = null,
         array $options = []
     ): int {
-        $csv = new \App\Services\CsvService();
+        $csv = new \App\Services\CsvService;
 
         // Prepare documents with smart chunking
         $documents = $csv->prepareForEmbedding($filePath, $options);
@@ -272,7 +282,7 @@ class LocalAI
      */
     public function csv(): \App\Services\CsvService
     {
-        return new \App\Services\CsvService();
+        return new \App\Services\CsvService;
     }
 
     /**
@@ -280,9 +290,9 @@ class LocalAI
      */
     public function generateWithWebSearch(string $prompt, ?string $model = null): string
     {
-        $search = new \App\Services\WebSearchService();
+        $search = new \App\Services\WebSearchService;
         $webOllama = new \App\Services\OllamaWithWebSearch($this->ollama, $search);
-        
+
         return $webOllama->generateWithSearch($prompt, $model);
     }
 
@@ -291,7 +301,8 @@ class LocalAI
      */
     public function webSearch(string $query): array
     {
-        $search = new \App\Services\WebSearchService();
+        $search = new \App\Services\WebSearchService;
+
         return $search->search($query);
     }
 
@@ -300,9 +311,9 @@ class LocalAI
      */
     public function research(string $topic, ?string $model = null): string
     {
-        $search = new \App\Services\WebSearchService();
+        $search = new \App\Services\WebSearchService;
         $webOllama = new \App\Services\OllamaWithWebSearch($this->ollama, $search);
-        
+
         return $webOllama->research($topic, $model);
     }
 
@@ -311,6 +322,6 @@ class LocalAI
      */
     public function webSearchService(): \App\Services\WebSearchService
     {
-        return new \App\Services\WebSearchService();
+        return new \App\Services\WebSearchService;
     }
 }

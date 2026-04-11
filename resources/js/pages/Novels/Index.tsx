@@ -76,7 +76,7 @@ export default function Index({ novels }: Props) {
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     {novels.map(novel => (
-                        <Link key={novel.id} href={show.url({ novel: novel.id })}>
+                        <Link key={novel.id} href={show.url({ novel: novel.id })} prefetch>
                             <Card className="hover:bg-accent/50 transition-colors cursor-pointer h-full">
                                 <CardHeader>
                                     <CardTitle>{novel.title}</CardTitle>

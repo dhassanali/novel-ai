@@ -16,9 +16,10 @@ import {
     TooltipProvider,
     TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { Chapter, Character, Location, Novel } from '@/types/novel';
+import { Chapter, Character, ChapterStatus, Location, Novel } from '@/types/novel';
 import {
     BookOpen,
+    Download,
     FileText,
     Globe,
     Lightbulb,
@@ -46,9 +47,22 @@ interface NovelSidebarProps {
     onDeleteCharacter: (char: Character) => void;
     onManageLocation: (loc?: Location) => void;
     onDeleteLocation: (loc: Location) => void;
+    onExport: () => void;
 }
 
 type Tab = 'chapters' | 'characters' | 'locations' | 'sources' | 'brainstorm';
+
+const STATUS_DOT: Record<ChapterStatus, string> = {
+    draft: 'bg-muted-foreground/40',
+    writing: 'bg-yellow-400',
+    complete: 'bg-green-500',
+};
+
+const STATUS_LABEL: Record<ChapterStatus, string> = {
+    draft: 'Draft',
+    writing: 'Writing',
+    complete: 'Complete',
+};
 
 export default function NovelSidebar({
     novel,
@@ -64,16 +78,26 @@ export default function NovelSidebar({
     onDeleteCharacter,
     onManageLocation,
     onDeleteLocation,
+    onExport,
 }: NovelSidebarProps) {
     const coverInputRef = useRef<HTMLInputElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [activeTab, setActiveTab] = useState<Tab>('chapters');
 
+    const wordCountGoal = novel.word_count_goal;
+    const wordCountPercent =
+        wordCountGoal && wordCountGoal > 0
+            ? Math.min(
+                  100,
+                  Math.round((novel.total_word_count / wordCountGoal) * 100),
+              )
+            : null;
+
     return (
         <div className="flex w-80 flex-col border-r bg-muted/10">
             <div className="border-b p-4">
                 <div className="flex items-start gap-4">
-                    {/* Cover Image - Smaller */}
+                    {/* Cover Image */}
                     <div className="group relative h-24 w-16 shrink-0 overflow-hidden rounded-md bg-muted">
                         {novel.cover_image_url ? (
                             <img
@@ -123,18 +147,58 @@ export default function NovelSidebar({
                             >
                                 {novel.title}
                             </h2>
-                            <Button
-                                size="icon"
-                                variant="ghost"
-                                className="h-6 w-6 shrink-0"
-                                onClick={onEditNovel}
-                            >
-                                <Pencil className="h-3 w-3" />
-                            </Button>
+                            <div className="flex shrink-0 items-center gap-1">
+                                <TooltipProvider>
+                                    <Tooltip>
+                                        <TooltipTrigger asChild>
+                                            <Button
+                                                size="icon"
+                                                variant="ghost"
+                                                className="h-6 w-6"
+                                                onClick={onExport}
+                                            >
+                                                <Download className="h-3 w-3" />
+                                            </Button>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                            Export as Markdown
+                                        </TooltipContent>
+                                    </Tooltip>
+                                </TooltipProvider>
+                                <Button
+                                    size="icon"
+                                    variant="ghost"
+                                    className="h-6 w-6"
+                                    onClick={onEditNovel}
+                                >
+                                    <Pencil className="h-3 w-3" />
+                                </Button>
+                            </div>
                         </div>
                         <div className="mt-1 text-xs text-muted-foreground">
                             {novel.total_word_count.toLocaleString()} words
+                            {wordCountGoal && (
+                                <span className="text-muted-foreground/60">
+                                    {' '}
+                                    / {wordCountGoal.toLocaleString()}
+                                </span>
+                            )}
                         </div>
+                        {wordCountPercent !== null && (
+                            <div className="mt-1.5">
+                                <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                                    <div
+                                        className="h-full rounded-full bg-primary transition-all"
+                                        style={{
+                                            width: `${wordCountPercent}%`,
+                                        }}
+                                    />
+                                </div>
+                                <div className="mt-0.5 text-xs text-muted-foreground/60">
+                                    {wordCountPercent}%
+                                </div>
+                            </div>
+                        )}
                         <div className="text-xs text-muted-foreground">
                             {novel.chapters.length} chapters
                         </div>
@@ -269,29 +333,49 @@ export default function NovelSidebar({
                             New Chapter
                         </Button>
                         <div className="space-y-1">
-                            {novel.chapters.map((chapter) => (
-                                <div
-                                    key={chapter.id}
-                                    className="group relative"
-                                >
-                                    <Button
-                                        variant={
-                                            activeChapter?.id === chapter.id
-                                                ? 'secondary'
-                                                : 'ghost'
-                                        }
-                                        className="w-full justify-start pr-16"
-                                        onClick={() => onChapterSelect(chapter)}
+                            {novel.chapters.map((chapter) => {
+                                const dotColor =
+                                    STATUS_DOT[chapter.status ?? 'draft'];
+                                const statusLabel =
+                                    STATUS_LABEL[chapter.status ?? 'draft'];
+                                return (
+                                    <div
+                                        key={chapter.id}
+                                        className="group relative"
                                     >
-                                        <span className="truncate">
-                                            {chapter.title}
-                                        </span>
-                                    </Button>
-                                    <div className="absolute top-1/2 right-2 -translate-y-1/2 text-xs text-muted-foreground">
-                                        {chapter.word_count.toLocaleString()}
+                                        <Button
+                                            variant={
+                                                activeChapter?.id === chapter.id
+                                                    ? 'secondary'
+                                                    : 'ghost'
+                                            }
+                                            className="w-full justify-start pr-16"
+                                            onClick={() =>
+                                                onChapterSelect(chapter)
+                                            }
+                                        >
+                                            <TooltipProvider>
+                                                <Tooltip>
+                                                    <TooltipTrigger asChild>
+                                                        <span
+                                                            className={`mr-2 inline-block h-2 w-2 shrink-0 rounded-full ${dotColor}`}
+                                                        />
+                                                    </TooltipTrigger>
+                                                    <TooltipContent>
+                                                        {statusLabel}
+                                                    </TooltipContent>
+                                                </Tooltip>
+                                            </TooltipProvider>
+                                            <span className="truncate">
+                                                {chapter.title}
+                                            </span>
+                                        </Button>
+                                        <div className="absolute top-1/2 right-2 -translate-y-1/2 text-xs text-muted-foreground">
+                                            {chapter.word_count.toLocaleString()}
+                                        </div>
                                     </div>
-                                </div>
-                            ))}
+                                );
+                            })}
                             {novel.chapters.length === 0 && (
                                 <div className="py-4 text-center text-sm text-muted-foreground">
                                     No chapters yet.

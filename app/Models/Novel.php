@@ -2,45 +2,49 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Novel extends Model
 {
     use HasFactory;
-    protected $fillable = ['title', 'description', 'genre', 'user_id', 'cover_image', 'total_word_count'];
+
+    protected $fillable = ['title', 'description', 'genre', 'user_id', 'cover_image', 'total_word_count', 'word_count_goal'];
 
     protected $appends = ['cover_image_url'];
 
-    public function getCoverImageUrlAttribute(): ?string
+    protected function coverImageUrl(): Attribute
     {
-        if ($this->cover_image) {
-            return asset('storage/' . $this->cover_image);
-        }
-        return null;
+        return Attribute::get(fn () => $this->cover_image
+            ? asset('storage/'.$this->cover_image)
+            : null
+        );
     }
 
-    public function user()
+    public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }
 
-    public function chapters()
+    public function chapters(): HasMany
     {
         return $this->hasMany(Chapter::class)->orderBy('order');
     }
 
-    public function sourceDocuments()
+    public function sourceDocuments(): HasMany
     {
         return $this->hasMany(SourceDocument::class);
     }
 
-    public function characters()
+    public function characters(): HasMany
     {
         return $this->hasMany(Character::class);
     }
 
-    public function locations()
+    public function locations(): HasMany
     {
         return $this->hasMany(Location::class);
     }
@@ -48,6 +52,6 @@ class Novel extends Model
     public function updateTotalWordCount(): void
     {
         $this->total_word_count = $this->chapters()->sum('word_count');
-        $this->saveQuietly(); // Save without triggering events
+        $this->saveQuietly();
     }
 }

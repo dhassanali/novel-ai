@@ -2,10 +2,9 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-
 use App\Models\Novel;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 
@@ -16,7 +15,7 @@ class NovelController extends Controller
     public function index()
     {
         return Inertia::render('Novels/Index', [
-            'novels' => Novel::where('user_id', auth()->id())->latest()->get()
+            'novels' => Novel::where('user_id', auth()->id())->latest()->get(),
         ]);
     }
 
@@ -40,10 +39,12 @@ class NovelController extends Controller
     {
         $this->authorize('view', $novel);
 
+        Inertia::encryptHistory();
+
         $novel->load(['chapters', 'sourceDocuments', 'characters', 'locations']);
 
         return Inertia::render('Novels/Show', [
-            'novel' => $novel
+            'novel' => $novel,
         ]);
     }
 
@@ -55,6 +56,7 @@ class NovelController extends Controller
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
             'genre' => 'nullable|string|max:255',
+            'word_count_goal' => 'nullable|integer|min:1',
         ]);
 
         $novel->update($validated);
@@ -72,6 +74,7 @@ class NovelController extends Controller
         }
 
         $novel->delete();
+
         return to_route('novels.index');
     }
 
@@ -106,5 +109,35 @@ class NovelController extends Controller
         }
 
         return back()->with('success', 'Cover image deleted successfully');
+    }
+
+    public function export(Novel $novel): \Symfony\Component\HttpFoundation\StreamedResponse
+    {
+        $this->authorize('view', $novel);
+
+        $novel->load('chapters');
+
+        $filename = str($novel->title)->slug()->append('.md')->toString();
+
+        return response()->streamDownload(function () use ($novel) {
+            echo "# {$novel->title}\n\n";
+
+            if ($novel->genre) {
+                echo "**Genre:** {$novel->genre}\n\n";
+            }
+
+            if ($novel->description) {
+                echo "{$novel->description}\n\n";
+            }
+
+            echo "---\n\n";
+
+            foreach ($novel->chapters as $chapter) {
+                echo "## {$chapter->title}\n\n";
+                echo ($chapter->content ?? '')."\n\n";
+            }
+        }, $filename, [
+            'Content-Type' => 'text/markdown; charset=UTF-8',
+        ]);
     }
 }

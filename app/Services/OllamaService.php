@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Log;
 class OllamaService
 {
     protected Client $client;
+
     protected array $config;
 
     public function __construct(string $host, array $config = [])
@@ -28,11 +29,10 @@ class OllamaService
      * Generate text using LLM.
      */
     public function generate(
-        string  $prompt,
+        string $prompt,
         ?string $model = null,
-        array   $options = []
-    ): string
-    {
+        array $options = []
+    ): string {
         $model = $model ?? $this->config['default_model'];
 
         try {
@@ -63,12 +63,11 @@ class OllamaService
      * Generate text with streaming support.
      */
     public function generateStream(
-        string   $prompt,
+        string $prompt,
         callable $callback,
-        ?string  $model = null,
-        array    $options = []
-    ): void
-    {
+        ?string $model = null,
+        array $options = []
+    ): void {
         $model = $model ?? $this->config['default_model'];
 
         try {
@@ -85,14 +84,7 @@ class OllamaService
                 'stream' => true,
             ]);
 
-            $body = $response->getBody();
-
-            while (!$body->eof()) {
-                $line = $this->readLine($body);
-                if (empty($line)) {
-                    continue;
-                }
-
+            foreach ($this->streamLines($response->getBody()) as $line) {
                 $data = json_decode($line, true);
                 if (isset($data['response'])) {
                     $callback($data['response']);
@@ -113,24 +105,35 @@ class OllamaService
      */
     public function embed(string $text, ?string $model = null): array
     {
+        return $this->embedBatch([$text], $model)[0] ?? [];
+    }
+
+    /**
+     * Create embeddings for multiple texts in a single request.
+     *
+     * @param  string[]  $texts
+     * @return array[]
+     */
+    public function embedBatch(array $texts, ?string $model = null): array
+    {
         $model = $model ?? 'nomic-embed-text';
 
         try {
-            $response = $this->client->post('/api/embeddings', [
+            $response = $this->client->post('/api/embed', [
                 'json' => [
                     'model' => $model,
-                    'prompt' => $text,
+                    'input' => $texts,
                 ],
             ]);
 
             $body = json_decode($response->getBody()->getContents(), true);
 
-            $this->logUsage('embed', $model, $body);
+            $this->logUsage('embedBatch', $model, $body);
 
-            return $body['embedding'] ?? [];
+            return $body['embeddings'] ?? [];
         } catch (GuzzleException $e) {
-            $this->logError('embed', $e);
-            throw new \RuntimeException("Failed to create embedding: {$e->getMessage()}", 0, $e);
+            $this->logError('embedBatch', $e);
+            throw new \RuntimeException("Failed to create embeddings: {$e->getMessage()}", 0, $e);
         }
     }
 
@@ -153,7 +156,7 @@ class OllamaService
     /**
      * Pull a model from Ollama library.
      */
-    public function pullModel(string $model, callable $progressCallback = null): bool
+    public function pullModel(string $model, ?callable $progressCallback = null): bool
     {
         try {
             $response = $this->client->post('/api/pull', [
@@ -161,14 +164,7 @@ class OllamaService
                 'stream' => true,
             ]);
 
-            $body = $response->getBody();
-
-            while (!$body->eof()) {
-                $line = $this->readLine($body);
-                if (empty($line)) {
-                    continue;
-                }
-
+            foreach ($this->streamLines($response->getBody()) as $line) {
                 $data = json_decode($line, true);
 
                 if ($progressCallback && isset($data['status'])) {
@@ -225,20 +221,30 @@ class OllamaService
     }
 
     /**
-     * Read a line from stream.
+     * Yield lines from a stream using buffered reads (8 KB at a time).
+     *
+     * @return \Generator<string>
      */
-    protected function readLine($stream): string
+    protected function streamLines($stream): \Generator
     {
-        $line = '';
-        while (!$stream->eof()) {
-            $char = $stream->read(1);
-            if ($char === "\n") {
-                break;
+        $buffer = '';
+
+        while (! $stream->eof()) {
+            $buffer .= $stream->read(8192);
+
+            while (($newlinePos = strpos($buffer, "\n")) !== false) {
+                $line = substr($buffer, 0, $newlinePos);
+                $buffer = substr($buffer, $newlinePos + 1);
+
+                if ($line !== '') {
+                    yield $line;
+                }
             }
-            $line .= $char;
         }
 
-        return $line;
+        if ($buffer !== '') {
+            yield $buffer;
+        }
     }
 
     /**
@@ -246,7 +252,7 @@ class OllamaService
      */
     protected function logUsage(string $operation, string $model, array $response): void
     {
-        if (!config('local-ai.logging.enabled')) {
+        if (! config('local-ai.logging.enabled')) {
             return;
         }
 
@@ -265,7 +271,7 @@ class OllamaService
      */
     protected function logError(string $operation, \Throwable $e): void
     {
-        if (!config('local-ai.logging.enabled')) {
+        if (! config('local-ai.logging.enabled')) {
             return;
         }
 

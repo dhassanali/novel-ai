@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Facade;
  * @method static string generate(string $prompt, ?string $model = null)
  * @method static \App\TextGenerationBuilder text(string $prompt)
  * @method static array embed(string $text, ?string $model = null)
+ * @method static array[] embedBatch(array $texts, ?string $model = null)
  * @method static string storeDocument(string $content, array $metadata = [])
  * @method static array searchDocuments(string $query, int $limit = 5, float $scoreThreshold = 0.7)
  * @method static string askDocuments(string $question, int $contextLimit = 5)

@@ -2,27 +2,30 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-
 use App\Models\Novel;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Illuminate\Http\Request;
 
 class SourceDocumentController extends Controller
 {
+    use AuthorizesRequests;
+
     public function store(Request $request, Novel $novel)
     {
+        $this->authorize('update', $novel);
         $request->validate([
             'file' => 'required',
             'file.*' => 'file|mimes:pdf,txt,md,csv|max:10240',
         ]);
 
         $files = $request->file('file');
-        
-        if (!is_array($files)) {
+
+        if (! is_array($files)) {
             $files = [$files];
         }
 
         foreach ($files as $file) {
-            $path = $file->store('novels/' . $novel->id, 'local');
+            $path = $file->store('novels/'.$novel->id, 'local');
 
             $document = $novel->sourceDocuments()->create([
                 'filename' => $file->getClientOriginalName(),
@@ -39,6 +42,7 @@ class SourceDocumentController extends Controller
 
     public function storeLink(Request $request, Novel $novel)
     {
+        $this->authorize('update', $novel);
         $request->validate([
             'url' => 'required|url',
         ]);

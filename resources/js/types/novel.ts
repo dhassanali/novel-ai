@@ -1,9 +1,13 @@
+export type ChapterStatus = 'draft' | 'writing' | 'complete';
+
 export interface Chapter {
     id: number;
     title: string;
     content: string;
     order: number;
     word_count: number;
+    status: ChapterStatus;
+    pov_character_id: number | null;
 }
 
 export interface SourceDocument {
@@ -32,6 +36,7 @@ export interface Novel {
     description: string;
     genre: string;
     total_word_count: number;
+    word_count_goal: number | null;
     cover_image_url: string | null;
     chapters: Chapter[];
     source_documents: SourceDocument[];
